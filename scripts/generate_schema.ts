@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { jsonSchemas } from '../src/game_data/json_schema';
+import { packageMajor } from './package_major';
 
 /*
  * Writes the JSON Schema for each kind of data file to schema/:
@@ -17,7 +18,7 @@ const check = process.argv.includes('--check');
 
 async function main() {
     let stale = false;
-    for (const { file, json } of jsonSchemas()) {
+    for (const { file, json } of jsonSchemas(packageMajor())) {
         const target = path.join(dir, file);
         const text = JSON.stringify(json, null, 4) + '\n';
         if (check) {

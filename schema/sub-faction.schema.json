@@ -1,4 +1,5 @@
 {
+    "$id": "https://cdn.jsdelivr.net/gh/force-org-data-team/fo_data_validator@1/schema/sub-faction.schema.json",
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {

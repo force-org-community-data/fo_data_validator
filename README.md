@@ -29,6 +29,35 @@ Exits 1 when there are errors. In a data repo, add this package as a dependency 
 
 `npm run validate-data` runs the CLI over every source in `examples/`.
 
+## Validate in CI with the GitHub Action
+
+```yaml
+- uses: actions/checkout@v4
+- uses: force-org-data-team/fo_data_validator@v1
+  with:
+      source: . # folder holding forceorg.json
+      # extends: ../base-source # optional: an extension source to check against `source`
+```
+
+`@v1` follows the newest `v1.x.x` tag (a moving major tag, see Releasing). Pin an exact tag such as `@v1.2.3` to freeze it.
+
+## Editor support (`$schema`)
+
+Each data file can point its editor at the matching JSON Schema for completion and inline errors. The Force Org app ignores the key.
+
+```json
+{
+    "$schema": "https://cdn.jsdelivr.net/gh/force-org-data-team/fo_data_validator@1/schema/faction.schema.json"
+}
+```
+
+Files: `source-manifest`, `game`, `faction` and `sub-faction` (each `<name>.schema.json`).
+
+- `@1` resolves to the newest `1.x.x` tag, so the URL stays valid across minor and patch releases and changes only on a major bump (a data format or expression language change). Use an exact tag (`@1.2.3`) for a frozen schema; jsDelivr serves tags immutably.
+- `@1` is cached for up to 12 hours on the CDN and 7 days in browsers, so a schema change can reach editors late. That is acceptable for schemas.
+- jsDelivr reads git tags, not GitHub Releases, and needs the repository to be public. Prerelease tags (`v2.0.0-beta.1`) are skipped when resolving `@1`.
+- Inside this repo, `examples/full` points at the local `schema/` files instead.
+
 ## Using it as a library
 
 - `@force-org/data-validator`: browser-safe API (schemas, inferred types, `checkShapes`, `validateGameData`, versions, expressions, `buildVocabulary`, ...).
@@ -58,3 +87,11 @@ Change a schema, then run `npm run generate-schema`; a test fails when `schema/`
 ## Versions
 
 `SCHEMA_VERSION` (data format) and `EXPRESSION_VERSION` (expression language) only go up on incompatible changes. The package's semver major bumps whenever either does.
+
+## Releasing
+
+1. Make sure `npm test`, `npm run type-check`, `npm run lint`, `npm run generate-schema -- --check` and `npm run validate-data` pass (CI runs them).
+2. Set the new version in `package.json` (`npm version <x.y.z> --no-git-tag-version`). A change to `SCHEMA_VERSION` or `EXPRESSION_VERSION`, or any other incompatible change, is a **major** bump. Whenever the major changes, run `npm run generate-schema`: it sets each schema's `$id` to the new `@<major>` URL.
+3. Commit, then tag and push the tag: `git tag vX.Y.Z && git push origin vX.Y.Z`. A GitHub Release is not needed; jsDelivr and npm's git installs read tags.
+4. Move the major tag the Action uses: `git tag -f vX && git push -f origin vX` (for example `v1`). Consumers who pin `#vX.Y.Z` are unaffected.
+5. Consumers update the tag in their `package.json` dependency.
