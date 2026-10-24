@@ -1,0 +1,179 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "$schema": {
+            "description": "JSON Schema URL for editor support; ignored by Force Org",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema0"
+                }
+            ]
+        },
+        "schemaVersion": {
+            "type": "number",
+            "description": "data format version; the app refuses sources newer than it understands"
+        },
+        "expressionVersion": {
+            "description": "the version of the expression language the source's expressions are written for; the app refuses sources newer than it understands. Left out, version 1 (with a warning)",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema1"
+                }
+            ]
+        },
+        "name": {
+            "type": "string"
+        },
+        "description": {
+            "type": "string"
+        },
+        "disclaimer": {
+            "description": "shown next to everything loaded from this source",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema2"
+                }
+            ]
+        },
+        "provides": {
+            "description": "complete games this source defines",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema3"
+                }
+            ]
+        },
+        "extends": {
+            "description": "games defined by another source that this source adds to",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema9"
+                }
+            ]
+        },
+        "examples": {
+            "description": "example lists the checker runs when the source loads (and in CI where adopted)",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema11"
+                }
+            ]
+        }
+    },
+    "required": [
+        "schemaVersion",
+        "name"
+    ],
+    "additionalProperties": false,
+    "definitions": {
+        "__schema0": {
+            "type": "string"
+        },
+        "__schema1": {
+            "type": "number"
+        },
+        "__schema2": {
+            "type": "string"
+        },
+        "__schema3": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "game": {
+                        "$ref": "#/definitions/__schema4"
+                    },
+                    "factions": {
+                        "$ref": "#/definitions/__schema5"
+                    },
+                    "subFactions": {
+                        "$ref": "#/definitions/__schema7"
+                    }
+                },
+                "required": [
+                    "game",
+                    "factions"
+                ],
+                "additionalProperties": false,
+                "description": "File paths are relative to the manifest"
+            }
+        },
+        "__schema4": {
+            "type": "string",
+            "description": "a `GameSystem` file"
+        },
+        "__schema5": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/__schema6"
+            },
+            "description": "`Faction` files"
+        },
+        "__schema6": {
+            "type": "string"
+        },
+        "__schema7": {
+            "description": "`SubFaction` files",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema8"
+                }
+            ]
+        },
+        "__schema8": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "__schema9": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "game": {
+                        "type": "string",
+                        "description": "id of the extended game; bound to a loaded source that provides it (the user picks if several do)"
+                    },
+                    "versions": {
+                        "type": "string",
+                        "description": "A semver range a version must satisfy, e.g. `>=1.2.0 <2.0.0`"
+                    },
+                    "factions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "subFactions": {
+                        "description": "may name a parent faction from another source in the same game",
+                        "allOf": [
+                            {
+                                "$ref": "#/definitions/__schema10"
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "game",
+                    "versions"
+                ],
+                "additionalProperties": false
+            }
+        },
+        "__schema10": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "__schema11": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+    },
+    "title": "SourceManifest"
+}

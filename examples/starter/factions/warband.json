@@ -1,0 +1,113 @@
+{
+    "id": "warband",
+    "version": "1.0.0",
+    "name": "Warband",
+    "game": { "id": "starter", "versions": ">=1.0.0 <2.0.0" },
+    "defaultDetachment": "warband",
+    "units": {
+        "captain": {
+            "id": "captain",
+            "name": "Captain",
+            "role": "leader",
+            "type": "infantry",
+            "cost": { "points": 60 },
+            "modelCount": 1,
+            "profiles": [
+                {
+                    "id": "captain",
+                    "name": "Captain",
+                    "template": "infantry",
+                    "stats": { "move": "6", "skill": "3", "wounds": "3" }
+                }
+            ],
+            "defaultWargear": [{ "kind": "weapon", "id": "sword" }],
+            "upgrades": {
+                "ranged": {
+                    "id": "ranged",
+                    "name": "Ranged weapon",
+                    "perModel": { "type": "single" },
+                    "options": {
+                        "none": {
+                            "id": "none",
+                            "name": "None",
+                            "cost": { "points": 0 }
+                        },
+                        "bow": {
+                            "id": "bow",
+                            "name": "Bow",
+                            "cost": { "points": 10 },
+                            "weaponRefs": ["bow"]
+                        },
+                        "banner": {
+                            "id": "banner",
+                            "name": "Banner",
+                            "cost": { "points": 15 },
+                            "equipmentRefs": ["banner"],
+                            "when": {
+                                "if": "list.limit(points) >= 750",
+                                "message": "Only in armies of 750 points or more"
+                            }
+                        }
+                    },
+                    "default": "none"
+                }
+            }
+        },
+        "warrior": {
+            "id": "warrior",
+            "name": "Warrior",
+            "role": "troop",
+            "type": "infantry",
+            "cost": { "points": 40 },
+            "modelCount": 5,
+            "additionalModels": { "max": 5, "cost": { "points": 8 } },
+            "profiles": [
+                {
+                    "id": "warrior",
+                    "name": "Warrior",
+                    "template": "infantry",
+                    "stats": { "move": "6", "skill": "4", "wounds": "1" }
+                }
+            ],
+            "defaultWargear": [
+                { "kind": "weapon", "id": "sword", "perModel": true }
+            ],
+            "limit": {
+                "max": "2 + floor(list.limit(points) / 500)",
+                "scope": "list",
+                "message": "Too many Warriors for the army's size"
+            }
+        }
+    },
+    "weapons": {
+        "sword": {
+            "id": "sword",
+            "name": "Sword",
+            "template": "weapon",
+            "profiles": [
+                {
+                    "name": "Sword",
+                    "stats": { "range": "Melee", "attacks": "2" }
+                }
+            ]
+        },
+        "bow": {
+            "id": "bow",
+            "name": "Bow",
+            "template": "weapon",
+            "profiles": [
+                { "name": "Bow", "stats": { "range": "24\"", "attacks": "2" } }
+            ]
+        }
+    },
+    "equipment": {
+        "banner": {
+            "id": "banner",
+            "name": "Banner",
+            "text": "Friendly units within 6\" re-roll failed morale checks."
+        }
+    },
+    "upgrades": {},
+    "specialRules": {},
+    "detachments": {}
+}

@@ -1,0 +1,16 @@
+{
+    "$schema": "../../schema/source-manifest.schema.json",
+    "schemaVersion": 1,
+    "expressionVersion": 1,
+    "name": "Full coverage test source",
+    "description": "A generic source that uses every part of the data schema. Test fixture; not a real game.",
+    "disclaimer": "Test data only.",
+    "provides": [
+        {
+            "game": "game.json",
+            "factions": ["factions/field-army.json"],
+            "subFactions": ["sub-factions/veterans.json"]
+        }
+    ],
+    "examples": ["lists/sample-list.json"]
+}

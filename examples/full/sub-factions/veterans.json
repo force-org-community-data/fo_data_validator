@@ -1,0 +1,169 @@
+{
+    "$schema": "../../../schema/sub-faction.schema.json",
+    "id": "veterans",
+    "version": "1.0.0",
+    "name": "Veterans",
+    "description": "Uses every sub-faction record kind and every unit modifier action.",
+    "parent": { "faction": "field-army", "versions": ">=1.0.0 <2.0.0" },
+    "overrides": [{ "kind": "specialRules", "id": "disciplined" }],
+    "specialRules": {
+        "disciplined": {
+            "id": "disciplined",
+            "name": "Disciplined",
+            "text": "Veterans re-roll failed morale tests every time."
+        },
+        "battle-hardened": {
+            "id": "battle-hardened",
+            "name": "Battle-hardened",
+            "text": "Veteran rule."
+        }
+    },
+    "upgrades": {
+        "master-crafted": {
+            "id": "master-crafted",
+            "name": "Master-crafted weapon",
+            "perModel": { "type": "single" },
+            "options": {
+                "master-crafted": {
+                    "id": "master-crafted",
+                    "name": "Master-crafted weapon",
+                    "cost": { "points": 5 }
+                }
+            }
+        }
+    },
+    "units": {
+        "veteran-squad": {
+            "id": "veteran-squad",
+            "name": "Veteran Squad",
+            "role": "troop",
+            "type": "infantry",
+            "cost": { "points": 130 },
+            "modelCount": 5,
+            "profiles": [
+                {
+                    "id": "veteran",
+                    "name": "Veteran",
+                    "template": "infantry",
+                    "tags": ["Elite"],
+                    "stats": {
+                        "move": "6",
+                        "skill": "3",
+                        "wounds": "2",
+                        "morale": "8",
+                        "save": "4+"
+                    }
+                }
+            ],
+            "defaultWargear": [
+                { "kind": "weapon", "id": "rifle", "perModel": true }
+            ]
+        }
+    },
+    "weapons": {
+        "scoped-rifle": {
+            "id": "scoped-rifle",
+            "name": "Scoped rifle",
+            "template": "ranged",
+            "profiles": [
+                {
+                    "name": "Scoped rifle",
+                    "stats": { "range": "36\"", "attacks": "1", "damage": "2" }
+                }
+            ]
+        }
+    },
+    "equipment": {
+        "medal": { "id": "medal", "name": "Medal", "text": "Decoration." }
+    },
+    "detachments": {
+        "veteran-formation": {
+            "id": "veteran-formation",
+            "name": "Veteran Formation",
+            "type": "reserve",
+            "slots": [
+                {
+                    "roles": ["troop"],
+                    "units": { "unitIds": ["veteran-squad"] },
+                    "required": true
+                }
+            ],
+            "min": 0,
+            "max": 1
+        }
+    },
+    "selectors": {
+        "veteran-units": {
+            "id": "veteran-units",
+            "name": "Veteran units",
+            "match": { "unitIds": ["veteran-squad"] }
+        }
+    },
+    "slotOptions": {
+        "decorated": {
+            "id": "decorated",
+            "name": "Decorated",
+            "text": "Adds a Medal.",
+            "slotTag": "prime",
+            "effects": [
+                { "kind": "specialRule", "rule": { "id": "battle-hardened" } }
+            ]
+        }
+    },
+    "subChoices": {
+        "training": {
+            "id": "training",
+            "name": "Training",
+            "default": "basic",
+            "values": {
+                "basic": { "id": "basic", "name": "Basic" },
+                "advanced": {
+                    "id": "advanced",
+                    "name": "Advanced",
+                    "cost": { "points": 5 }
+                }
+            }
+        }
+    },
+    "unitModifiers": {
+        "sergeants-master-crafted": {
+            "id": "sergeants-master-crafted",
+            "name": "Sergeants may take a master-crafted weapon",
+            "selector": { "profiles": { "anyOf": ["Sergeant"] } },
+            "actions": [{ "kind": "addUpgrade", "upgradeId": "master-crafted" }]
+        },
+        "steadfast-line": {
+            "id": "steadfast-line",
+            "name": "Steadfast line",
+            "selector": "@line-troops",
+            "actions": [
+                {
+                    "kind": "stat",
+                    "profiles": { "anyOf": ["infantry"] },
+                    "changes": [
+                        { "stat": "morale", "op": "add", "value": 1, "max": 10 }
+                    ],
+                    "when": {
+                        "if": "contingent.count(@line-troops) >= 3",
+                        "message": "Needs three line troop units in this formation group"
+                    }
+                },
+                {
+                    "kind": "specialRule",
+                    "rule": { "id": "armoured", "value": "2" }
+                }
+            ]
+        },
+        "no-walkers": {
+            "id": "no-walkers",
+            "name": "No Walkers",
+            "selector": { "unitIds": ["walker"] },
+            "actions": [
+                {
+                    "kind": "unavailable",
+                    "message": "Veterans may never take Walkers"
+                }
+            ]
+        }
+    }
+}
