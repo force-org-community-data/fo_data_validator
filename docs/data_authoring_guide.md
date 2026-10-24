@@ -18,7 +18,7 @@ Read this first, then use the pointers at the end for exact types, the full expr
 
 Only edit what the errors point at. Don't hand-fix unrelated records.
 
-**Working in your own data repo?** The validator lives in https://github.com/force-org-data-team/fo_data_validator. Add it as a dependency pinned to a release tag (`"@force-org/data-validator": "git+https://github.com/force-org-data-team/fo_data_validator.git#v1.0.0"`), run `npm install`, and check your folder with `npx fo-validate /path/to/my-data`. (For an extension source, pass the base source first: `npx fo-validate /path/to/base /path/to/my-data`.) To run the check on every push and pull request, see "Validate in CI" in the validator's README.
+**Working in your own data repo?** The validator lives in https://github.com/force-org-data-team/fo_data_validator. Add it as a dependency pinned to a release tag (`"@force-org/data-validator": "git+https://github.com/force-org-data-team/fo_data_validator.git#v1.0.0"`), run `npm install`, and check your folder with `npx fo-validate /path/to/my-data`. (For an extension source, pass the base source first: `npx fo-validate /path/to/base /path/to/my-data`.)
 
 ## 2. Source layout
 
@@ -308,5 +308,5 @@ The complete reference is `docs/specs/expression_language_spec_2026-10-17.md`; t
 - `schema/*.schema.json`: the exact schema of each file kind with a description on every field. Point your editor at them for completion and inline errors: add `"$schema": "<url or relative path>/faction.schema.json"` to a file (Force Org ignores the key), or map them in your editor settings. They are generated from `src/game_data/schema.ts` with `npm run generate-schema`.
 - `docs/specs/data_schema_spec_2026-10-17.md`: the reasoning behind the schema. The spec was written before implementation; where it differs from the JSON Schema or the validator, those win.
 - `docs/specs/expression_language_spec_2026-10-17.md`: the full expression language.
-- `examples/`: complete, generic, game-neutral sources. `starter` (smallest), `full` (uses every part of the schema: contingent and unit resources, slot options, list rules, sub-choices, sub-faction modifiers), `extension` (an extension source for `full`).
+- `examples/`: complete sources. generic, game-neutral test sources. `starter` (smallest), `full` (uses every part of the schema: contingent and unit resources, slot options, list rules, sub-choices, sub-faction modifiers), `extension` (an extension source for `full`).
 - The Force Org app's Data Editor → Docs page: the same material as a page, with the open game's names listed live.
