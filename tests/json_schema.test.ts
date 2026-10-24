@@ -3,7 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { jsonSchemas } from '../src/game_data/json_schema';
+import { jsonSchemas, schemaId } from '../src/game_data/json_schema';
+import { packageMajor } from '../scripts/package_major';
 import { readSource } from '../src/game_data/read_source';
 import {
     checkShape,
@@ -14,8 +15,21 @@ import {
 const root = path.join(import.meta.dirname, '..');
 
 describe('generated JSON Schema', () => {
+    it('has a stable $id on the major-version URL', () => {
+        for (const { file, json } of jsonSchemas(packageMajor())) {
+            assert.equal(
+                (json as { $id: string }).$id,
+                schemaId(packageMajor(), file)
+            );
+            assert.match(
+                (json as { $id: string }).$id,
+                /^https:\/\/cdn\.jsdelivr\.net\/gh\/force-org-data-team\/fo_data_validator@\d+\/schema\/[a-z-]+\.schema\.json$/
+            );
+        }
+    });
+
     it('matches the zod schemas (run `npm run generate-schema` when this fails)', async () => {
-        for (const { file, json } of jsonSchemas()) {
+        for (const { file, json } of jsonSchemas(packageMajor())) {
             const current = await fs.readFile(
                 path.join(root, 'schema', file),
                 'utf8'
