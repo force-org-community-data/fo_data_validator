@@ -22,7 +22,7 @@ node bin/fo-validate.mjs <source dir> [<extension source dir>] [--json]
 Exits 1 when there are errors. In a data repo, add this package as a dependency pinned to a release tag and run `npx fo-validate <source dir>`:
 
 ```json
-"@force-org/data-validator": "git+https://github.com/force-org-data-team/fo_data_validator.git#v1.0.0"
+"@force-org/data-validator": "git+https://github.com/force-org-community-data/fo_data_validator.git#v1.0.0"
 ```
 
 (Use the explicit `git+https` form, not the `github:` shorthand, which can resolve to SSH and fail on CI.) Nothing is published to the npm registry.
@@ -49,7 +49,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v7
-            - uses: force-org-data-team/fo_data_validator@v1
+            - uses: force-org-community-data/fo_data_validator@v1
               with:
                   source: . # folder holding forceorg.json
                   # extends: ../base-source # optional: an extension source to check against `source`
@@ -98,7 +98,7 @@ Each data file can point its editor at the matching JSON Schema for completion a
 
 ```json
 {
-    "$schema": "https://cdn.jsdelivr.net/gh/force-org-data-team/fo_data_validator@1/schema/faction.schema.json"
+    "$schema": "https://cdn.jsdelivr.net/gh/force-org-community-data/fo_data_validator@1/schema/faction.schema.json"
 }
 ```
 

@@ -7,7 +7,7 @@
     "type": "module",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/force-org-data-team/fo_data_validator.git"
+        "url": "git+https://github.com/force-org-community-data/fo_data_validator.git"
     },
     "engines": {
         "node": ">=20"
