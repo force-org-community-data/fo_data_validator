@@ -1,0 +1,47 @@
+{
+    "id": "irregulars",
+    "version": "0.1.0",
+    "name": "Irregulars",
+    "parent": { "faction": "field-army", "versions": ">=1.0.0 <2.0.0" },
+    "units": {
+        "militia": {
+            "id": "militia",
+            "name": "Militia",
+            "role": "troop",
+            "type": "infantry",
+            "tags": ["Rabble"],
+            "cost": { "points": 60 },
+            "modelCount": 10,
+            "profiles": [
+                {
+                    "id": "militiaman",
+                    "name": "Militiaman",
+                    "template": "infantry",
+                    "stats": {
+                        "move": "6",
+                        "skill": "5",
+                        "wounds": "1",
+                        "morale": "5",
+                        "save": "6+"
+                    }
+                }
+            ],
+            "defaultWargear": [
+                { "kind": "weapon", "id": "rifle", "perModel": true }
+            ],
+            "limit": {
+                "max": "1 + floor(contingent.count(unit:squad) / 2)",
+                "scope": "contingent",
+                "message": "One Militia, plus one per two Infantry Squads in this formation group"
+            }
+        }
+    },
+    "overrides": [{ "kind": "specialRules", "id": "disciplined" }],
+    "specialRules": {
+        "disciplined": {
+            "id": "disciplined",
+            "name": "Disciplined",
+            "text": "Irregulars have no discipline; this replaces the base rule."
+        }
+    }
+}

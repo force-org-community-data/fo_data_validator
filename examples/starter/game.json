@@ -1,0 +1,65 @@
+{
+    "id": "starter",
+    "version": "1.0.0",
+    "name": "Starter Game",
+    "roles": {
+        "leader": { "id": "leader", "name": "Leader" },
+        "troop": { "id": "troop", "name": "Troop" }
+    },
+    "unitTypes": {
+        "infantry": { "id": "infantry", "name": "Infantry" }
+    },
+    "groupTypes": {
+        "army": {
+            "id": "army",
+            "name": "Army",
+            "contingent": "root",
+            "source": "main",
+            "min": 1,
+            "max": 1
+        }
+    },
+    "resources": {
+        "points": {
+            "id": "points",
+            "name": "Points",
+            "scope": "list",
+            "defaultLimit": 500,
+            "suffix": "pts"
+        }
+    },
+    "stats": {
+        "unit": {
+            "infantry": {
+                "id": "infantry",
+                "name": "Infantry",
+                "stats": [
+                    { "id": "move", "label": "Move", "numeric": true },
+                    { "id": "skill", "label": "Skill", "numeric": true },
+                    { "id": "wounds", "label": "Wounds", "numeric": true }
+                ]
+            }
+        },
+        "weapon": {
+            "weapon": {
+                "id": "weapon",
+                "name": "Weapon",
+                "stats": [
+                    { "id": "range", "label": "Range" },
+                    { "id": "attacks", "label": "Attacks" }
+                ]
+            }
+        }
+    },
+    "detachments": {
+        "warband": {
+            "id": "warband",
+            "name": "Warband",
+            "type": "army",
+            "slots": [
+                { "roles": ["leader"], "required": true },
+                { "roles": ["troop"], "repeat": { "min": 1, "max": 4 } }
+            ]
+        }
+    }
+}

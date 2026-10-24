@@ -1,0 +1,378 @@
+{
+    "$schema": "../../schema/game.schema.json",
+    "id": "full-game",
+    "version": "1.0.0",
+    "name": "Full Coverage Game",
+    "description": "Exercises every game-level record kind.",
+    "terms": {
+        "group": {
+            "word": "formation",
+            "singular": "Formation",
+            "plural": "Formations"
+        },
+        "root": {
+            "word": "core",
+            "singular": "Core Formation",
+            "plural": "Core Formations"
+        },
+        "contingent": {
+            "singular": "Formation Group",
+            "plural": "Formation Groups"
+        },
+        "list": { "singular": "Force", "plural": "Forces" },
+        "faction": { "singular": "Army", "plural": "Armies" },
+        "subFaction": { "singular": "Order", "plural": "Orders" },
+        "wargear": { "singular": "Wargear", "plural": "Wargear" }
+    },
+    "roles": {
+        "commander": {
+            "id": "commander",
+            "name": "Commander",
+            "grants": { "reserve": 1, "elite": 1 }
+        },
+        "officer": {
+            "id": "officer",
+            "name": "Officer",
+            "grants": { "reserve": 1 }
+        },
+        "troop": { "id": "troop", "name": "Troop" },
+        "support": { "id": "support", "name": "Support" },
+        "transport": { "id": "transport", "name": "Transport" },
+        "heavy": { "id": "heavy", "name": "Heavy" }
+    },
+    "unitTypes": {
+        "infantry": { "id": "infantry", "name": "Infantry" },
+        "vehicle": { "id": "vehicle", "name": "Vehicle" }
+    },
+    "groupTypes": {
+        "core": {
+            "id": "core",
+            "name": "Core",
+            "contingent": "root",
+            "source": "main",
+            "min": 1,
+            "max": 1
+        },
+        "allied": {
+            "id": "allied",
+            "name": "Allied",
+            "contingent": "root",
+            "source": "ally",
+            "max": "list.limit(points) / 1000"
+        },
+        "reserve": {
+            "id": "reserve",
+            "name": "Reserve",
+            "contingent": { "linksTo": ["core", "allied"] },
+            "cost": { "reserve": 1 }
+        },
+        "elite": {
+            "id": "elite",
+            "name": "Elite",
+            "contingent": { "linksTo": ["core", "allied"] },
+            "cost": { "reserve": 1, "elite": 1 }
+        }
+    },
+    "slotTags": {
+        "prime": {
+            "id": "prime",
+            "name": "Prime",
+            "description": "May take a slot option",
+            "optionLabel": "Prime Option"
+        }
+    },
+    "resources": {
+        "points": {
+            "id": "points",
+            "name": "Points",
+            "scope": "list",
+            "defaultLimit": 1000,
+            "suffix": "pts",
+            "usedFor": [
+                "unit",
+                "additionalModels",
+                "option",
+                "slotOption",
+                "group"
+            ]
+        },
+        "reserve": {
+            "id": "reserve",
+            "name": "Reserve Points",
+            "scope": "contingent",
+            "message": "Too many Reserve and Elite Formations",
+            "usedFor": ["group", "grant"]
+        },
+        "elite": {
+            "id": "elite",
+            "name": "Elite Points",
+            "scope": "contingent",
+            "message": "Too many Elite Formations"
+        },
+        "slots": {
+            "id": "slots",
+            "name": "Slots",
+            "scope": "unit",
+            "capacityStat": "capacity"
+        }
+    },
+    "stats": {
+        "unit": {
+            "infantry": {
+                "id": "infantry",
+                "name": "Infantry",
+                "stats": [
+                    { "id": "move", "label": "Move", "numeric": true },
+                    { "id": "skill", "label": "Skill", "numeric": true },
+                    { "id": "wounds", "label": "Wounds", "numeric": true },
+                    { "id": "morale", "label": "Morale", "numeric": true },
+                    { "id": "save", "label": "Save" }
+                ]
+            },
+            "vehicle": {
+                "id": "vehicle",
+                "name": "Vehicle",
+                "stats": [
+                    { "id": "move", "label": "Move", "numeric": true },
+                    { "id": "hull", "label": "Hull", "numeric": true },
+                    { "id": "armour", "label": "Armour", "numeric": true },
+                    { "id": "capacity", "label": "Capacity", "numeric": true }
+                ]
+            }
+        },
+        "weapon": {
+            "ranged": {
+                "id": "ranged",
+                "name": "Ranged",
+                "stats": [
+                    { "id": "range", "label": "Range" },
+                    { "id": "attacks", "label": "Attacks", "numeric": true },
+                    { "id": "damage", "label": "Damage", "numeric": true }
+                ]
+            },
+            "melee": {
+                "id": "melee",
+                "name": "Melee",
+                "stats": [
+                    { "id": "attacks", "label": "Attacks", "numeric": true },
+                    { "id": "damage", "label": "Damage", "numeric": true }
+                ]
+            }
+        }
+    },
+    "choices": {
+        "stance": {
+            "id": "stance",
+            "name": "Stance",
+            "values": {
+                "offensive": { "id": "offensive", "name": "Offensive" },
+                "defensive": { "id": "defensive", "name": "Defensive" }
+            },
+            "default": "offensive"
+        }
+    },
+    "listRules": {
+        "heavy-cap": {
+            "kind": "resourceCap",
+            "id": "heavy-cap",
+            "resource": "points",
+            "units": { "roles": ["heavy"] },
+            "max": { "percentOfLimit": 25, "round": "down" },
+            "message": "No more than 25% of the points limit may be spent on Heavy units"
+        },
+        "allies-cap": {
+            "kind": "resourceCap",
+            "id": "allies-cap",
+            "resource": "points",
+            "contingentTypes": ["allied"],
+            "max": { "percentOfLimit": 50, "round": "up" },
+            "message": "No more than 50% of the points limit may be spent on allied units"
+        },
+        "fixed-cap": {
+            "kind": "resourceCap",
+            "id": "fixed-cap",
+            "resource": "points",
+            "units": "@vehicles",
+            "max": { "value": "list.limit(points) / 2" },
+            "message": "Vehicles may not cost more than half the points limit"
+        },
+        "troop-minimum": {
+            "kind": "count",
+            "id": "troop-minimum",
+            "units": { "roles": ["troop"] },
+            "scope": "list",
+            "min": 1,
+            "max": 12,
+            "message": "A force needs between 1 and 12 Troop units"
+        },
+        "reserve-count": {
+            "kind": "count",
+            "id": "reserve-count",
+            "groupTypes": ["reserve"],
+            "scope": "contingent",
+            "max": "root.count(role:troop)",
+            "message": "No more Reserve Formations than Troop units in the core"
+        },
+        "stance-check": {
+            "kind": "expression",
+            "id": "stance-check",
+            "when": {
+                "if": "choice(stance) == offensive or list.count(role:troop) >= 2",
+                "message": "A defensive force needs at least two Troop units"
+            }
+        }
+    },
+    "detachments": {
+        "standard-core": {
+            "id": "standard-core",
+            "name": "Standard Core Formation",
+            "type": "core",
+            "slots": [
+                { "roles": ["commander"], "required": true },
+                { "roles": ["officer"], "tags": ["prime"] },
+                { "roles": ["officer"] },
+                {
+                    "roles": ["troop"],
+                    "tags": ["prime"],
+                    "repeat": { "min": 1, "max": 3 }
+                },
+                { "roles": ["support"] },
+                {
+                    "roles": ["transport"],
+                    "units": "@vehicles",
+                    "when": {
+                        "if": "list.limit(points) >= 500",
+                        "message": "Needs a points limit of at least 500"
+                    }
+                }
+            ]
+        },
+        "allied-formation": {
+            "id": "allied-formation",
+            "name": "Allied Formation",
+            "type": "allied",
+            "slots": [
+                { "roles": ["officer"] },
+                {
+                    "roles": ["troop"],
+                    "repeat": { "max": "floor(list.limit(points) / 500)" }
+                }
+            ]
+        },
+        "heavy-formation": {
+            "id": "heavy-formation",
+            "name": "Heavy Formation",
+            "type": "elite",
+            "slots": [{ "roles": ["heavy"] }],
+            "units": {
+                "roles": ["heavy"],
+                "profiles": { "noneOf": ["infantry"] }
+            },
+            "min": 0,
+            "max": 1,
+            "cost": { "reserve": 1, "elite": 1, "points": 25 },
+            "when": {
+                "if": "list.limit(points) >= 1000",
+                "message": "Needs a points limit of at least 1,000"
+            }
+        }
+    },
+    "specialRules": {
+        "fearless": {
+            "id": "fearless",
+            "name": "Fearless",
+            "text": "Ignores morale tests."
+        },
+        "armoured": {
+            "id": "armoured",
+            "name": "Armoured (X)",
+            "text": "Reduces incoming damage by X.",
+            "configurable": true,
+            "defaultValue": "1"
+        },
+        "quartermaster": {
+            "id": "quartermaster",
+            "name": "Quartermaster (X)",
+            "text": "Grants X - 1 extra Reserve Points to its contingent.",
+            "configurable": true,
+            "defaultValue": "2",
+            "grants": { "reserve": "rule.value() - 1" }
+        }
+    },
+    "selectors": {
+        "vehicles": {
+            "id": "vehicles",
+            "name": "Vehicles",
+            "description": "Every unit with a Vehicle profile",
+            "match": { "profiles": { "anyOf": ["vehicle"] } }
+        },
+        "line-troops": {
+            "id": "line-troops",
+            "name": "Line troops",
+            "match": {
+                "roles": ["troop"],
+                "profiles": { "anyOf": ["infantry"], "noneOf": ["elite"] }
+            }
+        }
+    },
+    "slotOptions": {
+        "extra-support": {
+            "id": "extra-support",
+            "name": "Extra Support",
+            "text": "Adds a Support or Transport slot to this formation.",
+            "slotTag": "prime",
+            "cost": { "points": 10 },
+            "effects": [
+                { "kind": "slot", "roleChoices": ["support", "transport"] }
+            ]
+        },
+        "veteran-officer": {
+            "id": "veteran-officer",
+            "name": "Veteran Officer",
+            "text": "The model in this slot gains +1 Morale.",
+            "slotTag": "prime",
+            "slotRoles": ["officer"],
+            "effects": [
+                {
+                    "kind": "stat",
+                    "profiles": { "anyOf": ["infantry"] },
+                    "changes": [
+                        { "stat": "morale", "op": "add", "value": 1, "max": 10 }
+                    ]
+                },
+                {
+                    "kind": "specialRule",
+                    "rule": { "id": "fearless" }
+                }
+            ]
+        },
+        "flexible-troop": {
+            "id": "flexible-troop",
+            "name": "Flexible Troop",
+            "text": "Support units may also fill this slot.",
+            "slotTag": "prime",
+            "slotRoles": ["troop"],
+            "effects": [{ "kind": "allowedRoles", "roles": ["support"] }]
+        }
+    },
+    "subChoices": {
+        "mount": {
+            "id": "mount",
+            "name": "Mount",
+            "default": "fixed",
+            "values": {
+                "fixed": { "id": "fixed", "name": "Fixed" },
+                "turret": {
+                    "id": "turret",
+                    "name": "Turret",
+                    "costMultiplier": { "points": 2 }
+                },
+                "pintle": {
+                    "id": "pintle",
+                    "name": "Pintle",
+                    "cost": { "points": 3 }
+                }
+            }
+        }
+    }
+}

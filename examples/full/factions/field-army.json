@@ -1,0 +1,522 @@
+{
+    "$schema": "../../../schema/faction.schema.json",
+    "id": "field-army",
+    "version": "1.0.0",
+    "name": "Field Army",
+    "description": "Uses every faction-level record kind.",
+    "game": { "id": "full-game", "versions": ">=1.0.0 <2.0.0" },
+    "defaultDetachment": "standard-core",
+    "units": {
+        "squad": {
+            "id": "squad",
+            "name": "Infantry Squad",
+            "role": "troop",
+            "type": "infantry",
+            "tags": ["Line"],
+            "traits": ["Disciplined"],
+            "cost": { "points": 100 },
+            "modelCount": 10,
+            "additionalModels": { "max": 10, "cost": { "points": 10 } },
+            "profiles": [
+                {
+                    "id": "trooper",
+                    "name": "Trooper",
+                    "template": "infantry",
+                    "stats": {
+                        "move": "6",
+                        "skill": "4",
+                        "wounds": "1",
+                        "morale": "7",
+                        "save": "4+"
+                    },
+                    "specialRules": [{ "id": "armoured", "value": "2" }]
+                },
+                {
+                    "id": "sergeant",
+                    "name": "Sergeant",
+                    "template": "infantry",
+                    "tags": ["Sergeant"],
+                    "stats": {
+                        "move": "6",
+                        "skill": "3",
+                        "wounds": "2",
+                        "morale": "8",
+                        "save": "4+"
+                    },
+                    "specialRules": [{ "id": "fearless" }, { "id": "armoured" }]
+                }
+            ],
+            "defaultWargear": [
+                {
+                    "kind": "weapon",
+                    "id": "rifle",
+                    "perModel": true,
+                    "excludeProfiles": { "anyOf": ["Sergeant"] }
+                },
+                { "kind": "weapon", "id": "rifle", "profileId": "sergeant" },
+                { "kind": "equipment", "id": "rations" }
+            ],
+            "upgrades": {
+                "sergeant-melee": {
+                    "id": "sergeant-melee",
+                    "name": "Sergeant melee weapon",
+                    "profileId": "sergeant",
+                    "default": "knife",
+                    "perModel": { "type": "single" },
+                    "options": {
+                        "knife": {
+                            "id": "knife",
+                            "name": "Knife",
+                            "cost": { "points": 0 },
+                            "weaponRefs": ["knife"]
+                        },
+                        "axe": {
+                            "id": "axe",
+                            "name": "Axe",
+                            "cost": { "points": 10 },
+                            "weaponRefs": ["axe"]
+                        }
+                    },
+                    "restrictions": {
+                        "exclusions": [
+                            { "kind": "weapon", "id": "twin-blades" }
+                        ],
+                        "required": [],
+                        "requiredAnd": false
+                    }
+                },
+                "sergeant-blades": {
+                    "id": "sergeant-blades",
+                    "name": "Sergeant twin blades",
+                    "profileId": "sergeant",
+                    "perModel": { "type": "single" },
+                    "replaces": ["sergeant-melee"],
+                    "options": {
+                        "twin-blades": {
+                            "id": "twin-blades",
+                            "name": "Twin blades",
+                            "cost": { "points": 15 },
+                            "weaponRefs": ["twin-blades"],
+                            "swaps": [
+                                {
+                                    "from": { "kind": "weapon", "id": "rifle" },
+                                    "to": {
+                                        "kind": "weapon",
+                                        "id": "twin-blades"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                },
+                "heavy-weapons": {
+                    "id": "heavy-weapons",
+                    "name": "Heavy weapons",
+                    "multiSelect": true,
+                    "min": 0,
+                    "max": "floor(unit.models() / 5)",
+                    "perModel": {
+                        "type": "some",
+                        "max": 2,
+                        "excludeProfiles": { "anyOf": ["Sergeant"] }
+                    },
+                    "limitBy": [
+                        {
+                            "kind": "weapon",
+                            "id": "rifle",
+                            "count": 0.2,
+                            "profiles": { "anyOf": ["trooper"] }
+                        }
+                    ],
+                    "options": {
+                        "cannon": {
+                            "id": "cannon",
+                            "name": "Cannon",
+                            "cost": { "points": 15 },
+                            "weaponRefs": ["cannon"],
+                            "max": 1,
+                            "subChoices": ["mount"]
+                        }
+                    }
+                },
+                "squad-options": {
+                    "id": "squad-options",
+                    "name": "Squad options",
+                    "multiSelect": true,
+                    "perModel": { "type": "one-in-x", "everyX": 5 },
+                    "options": {
+                        "banner": { "id": "banner", "target": "banner" },
+                        "grenades": {
+                            "id": "grenades",
+                            "name": "Grenades",
+                            "cost": { "points": 5 },
+                            "equipmentRefs": ["grenades"],
+                            "when": {
+                                "if": "choice(stance) == offensive",
+                                "message": "Offensive forces only"
+                            },
+                            "effects": [
+                                {
+                                    "kind": "stat",
+                                    "changes": [
+                                        {
+                                            "stat": "move",
+                                            "op": "add",
+                                            "value": -1,
+                                            "min": 1
+                                        },
+                                        {
+                                            "stat": "save",
+                                            "op": "set",
+                                            "value": "5+"
+                                        }
+                                    ],
+                                    "profiles": { "anyOf": ["trooper"] }
+                                },
+                                {
+                                    "kind": "specialRule",
+                                    "rule": { "id": "armoured", "value": "3" }
+                                }
+                            ]
+                        }
+                    }
+                },
+                "full-kit": {
+                    "id": "full-kit",
+                    "name": "Full kit",
+                    "perModel": { "type": "every" },
+                    "when": {
+                        "if": "list.limit(points) >= 750",
+                        "message": "Only in forces of 750 points or more"
+                    },
+                    "options": {
+                        "kit": {
+                            "id": "kit",
+                            "name": "Full kit",
+                            "cost": { "points": 2 },
+                            "equipmentRefs": ["rations"]
+                        }
+                    }
+                },
+                "extra-kit": {
+                    "id": "extra-kit",
+                    "name": "Extra kit",
+                    "perModel": { "type": "multiple", "max": 3 },
+                    "options": {
+                        "pack": {
+                            "id": "pack",
+                            "name": "Pack",
+                            "cost": { "points": 1 },
+                            "equipmentRefs": ["rations"]
+                        }
+                    }
+                }
+            }
+        },
+        "walker": {
+            "id": "walker",
+            "name": "Walker",
+            "role": "heavy",
+            "type": "vehicle",
+            "cost": { "points": 150 },
+            "modelCount": 1,
+            "profiles": [
+                {
+                    "id": "walker",
+                    "name": "Walker",
+                    "template": "vehicle",
+                    "stats": {
+                        "move": "5",
+                        "hull": "8",
+                        "armour": "12",
+                        "capacity": "3"
+                    }
+                }
+            ],
+            "defaultWargear": [{ "kind": "weapon", "id": "cannon" }],
+            "upgrades": {
+                "fittings": {
+                    "id": "fittings",
+                    "name": "Fittings",
+                    "multiSelect": true,
+                    "perModel": { "type": "single" },
+                    "options": {
+                        "plating": {
+                            "id": "plating",
+                            "name": "Plating",
+                            "cost": { "points": 10, "slots": 1 },
+                            "effects": [
+                                {
+                                    "kind": "stat",
+                                    "changes": [
+                                        {
+                                            "stat": "armour",
+                                            "op": "add",
+                                            "value": 1
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        "mounted-cannon": {
+                            "id": "mounted-cannon",
+                            "name": "Mounted cannon",
+                            "cost": { "points": 20, "slots": 2 },
+                            "weaponRefs": ["cannon"],
+                            "subChoices": ["mount"]
+                        }
+                    }
+                }
+            }
+        },
+        "carrier": {
+            "id": "carrier",
+            "name": "Carrier",
+            "role": "transport",
+            "type": "vehicle",
+            "cost": { "points": 40 },
+            "modelCount": 1,
+            "profiles": [
+                {
+                    "id": "carrier",
+                    "name": "Carrier",
+                    "template": "vehicle",
+                    "stats": {
+                        "move": "10",
+                        "hull": "5",
+                        "armour": "10",
+                        "capacity": "2"
+                    }
+                }
+            ],
+            "limit": {
+                "max": "1 + floor(contingent.count(unit:squad) / 2)",
+                "scope": "contingent",
+                "message": "One Carrier, plus one per two Infantry Squads in this formation group"
+            }
+        },
+        "general": {
+            "id": "general",
+            "name": "General",
+            "role": "commander",
+            "type": "infantry",
+            "tags": ["Character"],
+            "cost": { "points": 80 },
+            "modelCount": 1,
+            "profiles": [
+                {
+                    "id": "general",
+                    "name": "General",
+                    "template": "infantry",
+                    "type": "infantry",
+                    "stats": {
+                        "move": "6",
+                        "skill": "2",
+                        "wounds": "3",
+                        "morale": "9",
+                        "save": "3+"
+                    },
+                    "specialRules": [{ "id": "quartermaster", "value": "3" }]
+                }
+            ],
+            "defaultWargear": [{ "kind": "weapon", "id": "twin-blades" }],
+            "limit": {
+                "max": 1,
+                "scope": "list",
+                "message": "Only one General"
+            }
+        },
+        "captain": {
+            "id": "captain",
+            "name": "Captain",
+            "role": "officer",
+            "type": "infantry",
+            "cost": { "points": 50 },
+            "modelCount": 1,
+            "when": {
+                "if": "list.count(unit:general) >= 1",
+                "message": "Needs a General in the force"
+            },
+            "profiles": [
+                {
+                    "id": "captain",
+                    "name": "Captain",
+                    "template": "infantry",
+                    "stats": {
+                        "move": "6",
+                        "skill": "3",
+                        "wounds": "2",
+                        "morale": "8",
+                        "save": "4+"
+                    }
+                }
+            ],
+            "defaultWargear": [{ "kind": "weapon", "id": "rifle" }]
+        },
+        "medic": {
+            "id": "medic",
+            "name": "Medic",
+            "role": "support",
+            "type": "infantry",
+            "cost": { "points": 30 },
+            "modelCount": 2,
+            "profiles": [
+                {
+                    "id": "medic",
+                    "name": "Medic",
+                    "template": "infantry",
+                    "stats": {
+                        "move": "6",
+                        "skill": "5",
+                        "wounds": "1",
+                        "morale": "6",
+                        "save": "5+"
+                    }
+                }
+            ]
+        }
+    },
+    "weapons": {
+        "rifle": {
+            "id": "rifle",
+            "name": "Rifle",
+            "template": "ranged",
+            "profiles": [
+                {
+                    "name": "Rifle",
+                    "stats": { "range": "24\"", "attacks": "1", "damage": "1" },
+                    "traits": ["Rapid"],
+                    "specialRules": [{ "id": "armoured", "value": "1" }]
+                }
+            ]
+        },
+        "cannon": {
+            "id": "cannon",
+            "name": "Cannon",
+            "template": "ranged",
+            "profiles": [
+                {
+                    "name": "Cannon (shell)",
+                    "stats": { "range": "48\"", "attacks": "1", "damage": "3" }
+                },
+                {
+                    "name": "Cannon (canister)",
+                    "stats": { "range": "12\"", "attacks": "4", "damage": "1" }
+                }
+            ]
+        },
+        "knife": {
+            "id": "knife",
+            "name": "Knife",
+            "template": "melee",
+            "profiles": [
+                { "name": "Knife", "stats": { "attacks": "1", "damage": "1" } }
+            ]
+        },
+        "axe": {
+            "id": "axe",
+            "name": "Axe",
+            "template": "melee",
+            "profiles": [
+                { "name": "Axe", "stats": { "attacks": "2", "damage": "2" } }
+            ]
+        },
+        "twin-blades": {
+            "id": "twin-blades",
+            "name": "Twin blades",
+            "template": "melee",
+            "profiles": [
+                {
+                    "name": "Twin blades",
+                    "stats": { "attacks": "3", "damage": "1" }
+                }
+            ]
+        }
+    },
+    "equipment": {
+        "banner": {
+            "id": "banner",
+            "name": "Banner",
+            "text": "+1 Morale to the unit while its bearer is alive."
+        },
+        "grenades": {
+            "id": "grenades",
+            "name": "Grenades",
+            "text": "May be thrown once per game."
+        },
+        "rations": {
+            "id": "rations",
+            "name": "Rations",
+            "text": "No rules effect."
+        }
+    },
+    "upgrades": {
+        "banner": {
+            "id": "banner",
+            "name": "Banner",
+            "perModel": { "type": "single" },
+            "options": {
+                "banner": {
+                    "id": "banner",
+                    "name": "Banner",
+                    "cost": { "points": 10 },
+                    "equipmentRefs": ["banner"]
+                }
+            }
+        }
+    },
+    "specialRules": {
+        "disciplined": {
+            "id": "disciplined",
+            "name": "Disciplined",
+            "text": "Re-rolls failed morale tests once per turn."
+        }
+    },
+    "detachments": {
+        "armoured-spearhead": {
+            "id": "armoured-spearhead",
+            "name": "Armoured Spearhead",
+            "type": "reserve",
+            "slots": [{ "roles": ["transport"], "repeat": { "max": 3 } }],
+            "max": "1 + floor(root.count(role:troop) / 2)",
+            "requires": [
+                { "units": "@line-troops", "count": 2, "scope": "root" },
+                { "units": { "unitIds": ["general"] } }
+            ],
+            "requirementText": "Needs two line troop units in its Core Formation and a General"
+        }
+    },
+    "selectors": {
+        "squads": {
+            "id": "squads",
+            "name": "Squads",
+            "match": { "unitIds": ["squad"] }
+        }
+    },
+    "slotOptions": {
+        "field-promotion": {
+            "id": "field-promotion",
+            "name": "Field Promotion",
+            "text": "The unit in this slot gains the Disciplined rule.",
+            "slotTag": "prime",
+            "effects": [
+                { "kind": "specialRule", "rule": { "id": "disciplined" } }
+            ]
+        }
+    },
+    "subChoices": {
+        "ammo": {
+            "id": "ammo",
+            "name": "Ammunition",
+            "default": "standard",
+            "values": {
+                "standard": { "id": "standard", "name": "Standard" },
+                "extra": {
+                    "id": "extra",
+                    "name": "Extra",
+                    "cost": { "points": 2 }
+                }
+            }
+        }
+    }
+}

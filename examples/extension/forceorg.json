@@ -1,0 +1,14 @@
+{
+    "schemaVersion": 1,
+    "expressionVersion": 1,
+    "name": "Extension test source",
+    "description": "A generic extension source: adds a sub-faction to a game another source provides. Test fixture; not a real game.",
+    "disclaimer": "Test data only.",
+    "extends": [
+        {
+            "game": "full-game",
+            "versions": ">=1.0.0 <2.0.0",
+            "subFactions": ["sub-factions/irregulars.json"]
+        }
+    ]
+}

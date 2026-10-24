@@ -1,0 +1,50 @@
+{
+    "name": "@force-org/data-validator",
+    "version": "1.0.0",
+    "description": "Data schema, checker and expression language for Force Org data sources",
+    "license": "UNLICENSED",
+    "private": false,
+    "type": "module",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/force-org-data-team/fo_data_validator.git"
+    },
+    "engines": {
+        "node": ">=20"
+    },
+    "exports": {
+        ".": "./src/index.ts",
+        "./node": "./src/node.ts",
+        "./schema/*": "./schema/*"
+    },
+    "bin": {
+        "fo-validate": "./bin/fo-validate.mjs"
+    },
+    "files": [
+        "bin",
+        "src",
+        "schema",
+        "scripts/validate_data.ts",
+        "docs",
+        "examples"
+    ],
+    "scripts": {
+        "test": "node --import tsx --test \"tests/**/*.test.ts\"",
+        "type-check": "tsc --noEmit",
+        "lint": "eslint .",
+        "generate-schema": "tsx scripts/generate_schema.ts",
+        "validate-data": "node bin/fo-validate.mjs examples/starter && node bin/fo-validate.mjs examples/full examples/extension"
+    },
+    "dependencies": {
+        "tsx": "^4.20.0",
+        "zod": "^4.6.0"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.0.0",
+        "@types/node": "^20.0.0",
+        "eslint": "^9.0.0",
+        "eslint-config-prettier": "^10.0.0",
+        "typescript": "^5.0.0",
+        "typescript-eslint": "^8.0.0"
+    }
+}

@@ -1,0 +1,13 @@
+{
+    "schemaVersion": 1,
+    "expressionVersion": 1,
+    "name": "Starter game",
+    "description": "The smallest useful data source: one game, one faction. Copy it as a starting point.",
+    "disclaimer": "Illustrative example. Not a real game.",
+    "provides": [
+        {
+            "game": "game.json",
+            "factions": ["factions/warband.json"]
+        }
+    ]
+}
