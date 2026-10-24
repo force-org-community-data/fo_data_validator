@@ -257,7 +257,7 @@ units/squad/upgrades/squad-options/options/grenades · when
                     ^ 'defensiv' isn't a value of stance (did you mean 'defensive'?)
 ```
 
-Errors stop that game or faction from loading and appear in the app's source report. The same checker ships as a CLI / GitHub Action for data repos (§13).
+Errors stop that game or faction from loading and appear in the app's source report. The same checker ships as a CLI for data repos.
 
 ## 13. Lint: typed rules first
 
@@ -275,7 +275,7 @@ Rule shapes that have a typed form must use it; expressions don't get helpers th
 Where it's enforced:
 
 - **The app:** warnings in the source report; it can't reject data from arbitrary sources.
-- **The CLI / GitHub Action:** failures, for data repos that adopt it.
+- **The CLI:** failures, for data repos that adopt it.
 - **Our own managed data repo (later):** hard CI checks on every pull request, so everything in it is known to work.
 
 ## 14. Versioning
