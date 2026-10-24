@@ -29,17 +29,31 @@ Exits 1 when there are errors. In a data repo, add this package as a dependency 
 
 `npm run validate-data` runs the CLI over every source in `examples/`.
 
-## Validate in CI with the GitHub Action
+## Validate in CI (data repos)
+
+A data repo depends on this package through its git URL (see above), so its CI installs the pinned validator and runs the CLI. No separate action is needed:
 
 ```yaml
-- uses: actions/checkout@v4
-- uses: force-org-data-team/fo_data_validator@v1
-  with:
-      source: . # folder holding forceorg.json
-      # extends: ../base-source # optional: an extension source to check against `source`
+# .github/workflows/validate.yml in the data repo
+name: Validate data
+on:
+    push:
+        branches: [main]
+    pull_request:
+jobs:
+    validate:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - run: npm ci
+            - run: npx fo-validate . # add a second folder to check an extension: npx fo-validate base-source .
 ```
 
-`@v1` follows the newest `v1.x.x` tag (a moving major tag, see Releasing). Pin an exact tag such as `@v1.2.3` to freeze it.
+The data repo's `package.json` needs only the dependency line shown above, with its lockfile committed. Updating the validator is changing the tag in that line (Renovate or Dependabot can do it).
 
 ## Editor support (`$schema`)
 
@@ -93,5 +107,4 @@ Change a schema, then run `npm run generate-schema`; a test fails when `schema/`
 1. Make sure `npm test`, `npm run type-check`, `npm run lint`, `npm run generate-schema -- --check` and `npm run validate-data` pass (CI runs them).
 2. Set the new version in `package.json` (`npm version <x.y.z> --no-git-tag-version`). A change to `SCHEMA_VERSION` or `EXPRESSION_VERSION`, or any other incompatible change, is a **major** bump. Whenever the major changes, run `npm run generate-schema`: it sets each schema's `$id` to the new `@<major>` URL.
 3. Commit, then tag and push the tag: `git tag vX.Y.Z && git push origin vX.Y.Z`. A GitHub Release is not needed; jsDelivr and npm's git installs read tags.
-4. Move the major tag the Action uses: `git tag -f vX && git push -f origin vX` (for example `v1`). Consumers who pin `#vX.Y.Z` are unaffected.
-5. Consumers update the tag in their `package.json` dependency.
+4. Consumers update the tag in their `package.json` dependency.

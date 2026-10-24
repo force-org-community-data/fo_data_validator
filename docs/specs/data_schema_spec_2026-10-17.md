@@ -330,4 +330,4 @@ The checker validates:
 Results:
 
 - **Errors** keep that game or faction from loading and appear in a source report; **lint findings** are warnings.
-- The same checker ships as a CLI (`fo-validate`) and a GitHub Action for data repos to run as CI checks, so nothing broken can merge.
+- The same checker ships as a CLI (`fo-validate`) that data repos run as CI checks, so nothing broken can merge.
