@@ -29,17 +29,68 @@ Exits 1 when there are errors. In a data repo, add this package as a dependency 
 
 `npm run validate-data` runs the CLI over every source in `examples/`.
 
-## Validate in CI with the GitHub Action
+## Validate in CI (data repos)
+
+Two options. Both run the same checks; pick whichever suits the data repo.
+
+### Option A: the GitHub Action
+
+No `package.json` or lockfile needed in the data repo.
 
 ```yaml
-- uses: actions/checkout@v4
-- uses: force-org-data-team/fo_data_validator@v1
-  with:
-      source: . # folder holding forceorg.json
-      # extends: ../base-source # optional: an extension source to check against `source`
+# .github/workflows/validate.yml in the data repo
+name: Validate data
+on:
+    push:
+        branches: [main]
+    pull_request:
+jobs:
+    validate:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: force-org-data-team/fo_data_validator@v1
+              with:
+                  source: . # folder holding forceorg.json
+                  # extends: ../base-source # optional: an extension source to check against `source`
 ```
 
 `@v1` follows the newest `v1.x.x` tag (a moving major tag, see Releasing). Pin an exact tag such as `@v1.2.3` to freeze it.
+
+### Option B: `npx` with the pinned dependency
+
+The data repo depends on this package through its git URL (see above) with its lockfile committed, so CI installs the exact pinned validator and runs the CLI. This is also the same command authors run locally.
+
+```yaml
+# .github/workflows/validate.yml in the data repo
+name: Validate data
+on:
+    push:
+        branches: [main]
+    pull_request:
+jobs:
+    validate:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - run: npm ci
+            - run: npx fo-validate . # for an extension: npx fo-validate ../base-source .
+```
+
+Updating the validator means changing the tag in the dependency line (Renovate or Dependabot can do it).
+
+### Which to choose
+
+|                                    | Action                                      | `npx`                                           |
+| ---------------------------------- | ------------------------------------------- | ----------------------------------------------- |
+| Data repo needs a `package.json`   | no                                          | yes                                             |
+| Validator version                  | the tag in `uses:`                          | the tag in the pinned dependency (and lockfile) |
+| Same version for local runs and CI | only if the author installs it separately   | yes                                             |
+| Maintenance here                   | keep the moving `vX` tag current on release | none                                            |
 
 ## Editor support (`$schema`)
 

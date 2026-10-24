@@ -18,7 +18,7 @@ Read this first, then use the pointers at the end for exact types, the full expr
 
 Only edit what the errors point at. Don't hand-fix unrelated records.
 
-**Working in your own data repo?** The validator lives in https://github.com/force-org-data-team/fo_data_validator. Add it as a dependency pinned to a release tag (`"@force-org/data-validator": "git+https://github.com/force-org-data-team/fo_data_validator.git#v1.0.0"`), run `npm install`, and check your folder with `npx fo-validate /path/to/my-data`. (For an extension source, pass the base source first: `npx fo-validate /path/to/base /path/to/my-data`.)
+**Working in your own data repo?** The validator lives in https://github.com/force-org-data-team/fo_data_validator. Add it as a dependency pinned to a release tag (`"@force-org/data-validator": "git+https://github.com/force-org-data-team/fo_data_validator.git#v1.0.0"`), run `npm install`, and check your folder with `npx fo-validate /path/to/my-data`. (For an extension source, pass the base source first: `npx fo-validate /path/to/base /path/to/my-data`.) To run the check on every push and pull request, use either the validator's GitHub Action or the `npx` workflow; both are in "Validate in CI" in its README.
 
 ## 2. Source layout
 
