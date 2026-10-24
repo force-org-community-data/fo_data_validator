@@ -29,7 +29,7 @@
         "examples"
     ],
     "scripts": {
-        "test": "node --import tsx --test \"tests/**/*.test.ts\"",
+        "test": "node --import tsx --test tests/*.test.ts",
         "type-check": "tsc --noEmit",
         "lint": "eslint .",
         "generate-schema": "tsx scripts/generate_schema.ts",
