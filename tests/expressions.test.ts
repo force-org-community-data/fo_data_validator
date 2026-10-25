@@ -365,7 +365,7 @@ describe('checker: errors', () => {
     });
 
     it('warns (not errors) on unknown traits, and keeps unit.count to wargear', () => {
-        assert.deepEqual(errors('unit.is(trait:iron-tercio)'), []);
+        assert.deepEqual(errors('unit.is(trait:heavy-guns)'), []);
         assert.deepEqual(warnings('unit.is(trait:veteran-corp)'), [
             "no unit has or is given the trait 'veteran-corp' (did you mean 'veteran-corps'?)",
         ]);

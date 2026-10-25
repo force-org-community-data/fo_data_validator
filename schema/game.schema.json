@@ -1087,7 +1087,7 @@
                         ]
                     },
                     "effects": {
-                        "description": "applied to every unit in the detachment, e.g. \"All Models in this Detachment gain the Infantry Tercio Trait\"",
+                        "description": "applied to every unit in the detachment, e.g. \"Every unit in this detachment gains the Gun Line trait\"",
                         "allOf": [
                             {
                                 "$ref": "#/definitions/__schema60"

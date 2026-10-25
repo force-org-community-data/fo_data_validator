@@ -624,7 +624,7 @@
                         ]
                     },
                     "effects": {
-                        "description": "applied to every unit in the detachment, e.g. \"All Models in this Detachment gain the Infantry Tercio Trait\"",
+                        "description": "applied to every unit in the detachment, e.g. \"Every unit in this detachment gains the Gun Line trait\"",
                         "allOf": [
                             {
                                 "$ref": "#/definitions/__schema95"
@@ -902,11 +902,11 @@
                     "profiles"
                 ],
                 "additionalProperties": false,
-                "description": "A set of models bought together: the unit holds between `min` and `max` copies of it, e.g. a Rapier Crew of one Gunner and one Carrier"
+                "description": "A set of models bought together: the unit holds between `min` and `max` copies of it, e.g. a Gun Crew of one Gunner and one Loader"
             }
         },
         "__schema11": {
-            "description": "shown to players, e.g. \"Rapier Crew\"; left out, built from the profile names",
+            "description": "shown to players, e.g. \"Gun Crew\"; left out, built from the profile names",
             "allOf": [
                 {
                     "$ref": "#/definitions/__schema12"
@@ -935,7 +935,7 @@
             "additionalProperties": {
                 "$ref": "#/definitions/__schema16"
             },
-            "description": "profile id → how many models of it one copy of the block holds, e.g. `{ \"rapier-gunner\": 1, \"rapier-carrier\": 1 }`"
+            "description": "profile id → how many models of it one copy of the block holds, e.g. `{ \"gunner\": 1, \"loader\": 1 }`"
         },
         "__schema16": {
             "type": "number"

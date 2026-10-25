@@ -127,31 +127,31 @@ Required: `id`, `version`, `name`, `game: { "id", "versions" }` and all of `unit
 ```
 
 - `role`, `type` and profile `template` are ids from the game. `tags` are free text, matched case-insensitively (`tag:heavy-assault` for `Heavy Assault`).
-- `traits` are the unit's traits (a faction trait, "Infantry Tercio"): free text, matched case-insensitively by `trait:` references and selector `traits`. Effects can add, remove or replace them (see Effects).
+- `traits` are the unit's traits (a faction trait, "Gun Line"): free text, matched case-insensitively by `trait:` references and selector `traits`. Effects can add, remove or replace them (see Effects).
 - `profiles[].id` is what upgrades, default wargear and sub-faction rules point at (`profileId`).
 - `defaultWargear` is carried without any upgrade; `perModel` makes the amount follow the model count; `excludeProfiles` leaves out one model per matching profile. With `perModel` and `profileId`, each model of that profile carries one.
 - `limit` caps how many of the unit a `group`, `contingent` or the `list` may hold (a number or expression).
 
 ### Composition: how many models of each profile
 
-`modelCount` and `additionalModels` say how big a unit is, but not which profile each model uses. When that matters (a Sergeant and 9 Legionaries, extra models that are always Legionaries, a crew of two different models bought together), describe the unit as **composition blocks**. A block is a set of models bought together; the unit holds between `min` and `max` copies of it:
+`modelCount` and `additionalModels` say how big a unit is, but not which profile each model uses. When that matters (a Sergeant and 9 Troopers, extra models that are always Troopers, a crew of two different models bought together), describe the unit as **composition blocks**. A block is a set of models bought together; the unit holds between `min` and `max` copies of it:
 
 ```json
-"rapier-section": {
-    "cost": { "points": 30 },
+"gun-team": {
+    "cost": { "points": 40 },
     "modelCount": 2,
     "composition": [
-        { "id": "rapier-crew", "name": "Rapier Crew",
-          "profiles": { "rapier-gunner": 1, "rapier-carrier": 1 },
-          "min": 1, "max": 4, "cost": { "points": 30 } }
+        { "id": "gun-crew", "name": "Gun Crew",
+          "profiles": { "gunner": 1, "loader": 1 },
+          "min": 1, "max": 3, "cost": { "points": 35 } }
     ],
-    "profiles": [ { "id": "rapier-gunner", … }, { "id": "rapier-carrier", … } ]
+    "profiles": [ { "id": "gunner", … }, { "id": "loader", … } ]
 }
-"tactical-squad": {
+"infantry-squad": {
     "modelCount": 10,
     "composition": [
-        { "id": "sergeant", "profiles": { "legion-sergeant": 1 } },
-        { "id": "legionaries", "name": "Legionaries", "profiles": { "legionary": 1 },
+        { "id": "sergeant", "profiles": { "sergeant": 1 } },
+        { "id": "troopers", "name": "Troopers", "profiles": { "trooper": 1 },
           "min": 9, "max": 19, "cost": { "points": 10 } }
     ]
 }
@@ -160,7 +160,7 @@ Required: `id`, `version`, `name`, `game: { "id", "versions" }` and all of `unit
 - `profiles` gives the models of each profile in **one copy** of the block (whole numbers, at least 1). A profile is in at most one block; one in no block has no models (a warning).
 - `min` (default 1) is the number of copies the unit's `cost` buys, and `max` (default `min`) is the most it may hold. A block whose `max` is above `min` needs a `cost` for each extra copy. `min: 0` makes a block optional.
 - `modelCount` is still required and must equal the blocks at their `min` (Σ `min` × models per copy), so older apps still read the unit. Don't use `additionalModels` alongside `composition`.
-- The app counts each profile's models from the copies taken, which drives `unit.models()`, `perModel` default wargear, and per-model upgrades. A `perModel` upgrade with a `profileId` counts only that profile's models, so "each Rapier Carrier may exchange…" is `"profileId": "rapier-carrier", "perModel": { "type": "some" }`.
+- The app counts each profile's models from the copies taken, which drives `unit.models()`, `perModel` default wargear, and per-model upgrades. A `perModel` upgrade with a `profileId` counts only that profile's models, so "each Loader may exchange…" is `"profileId": "loader", "perModel": { "type": "some" }`.
 - Needs validator 1.2.0+ and an app that supports composition blocks.
 
 ### Weapons, equipment, special rules
@@ -210,9 +210,9 @@ Stat and special-rule changes on profiles chosen by a **ProfileFilter** `{ "anyO
 A **trait effect** changes the unit's traits. Traits belong to the whole unit, so it has no profile filter, and its `when` can't use `profile`:
 
 ```json
-{ "kind": "trait", "add": ["Infantry Tercio"] }
+{ "kind": "trait", "add": ["Gun Line"] }
 { "kind": "trait", "remove": ["Line"] }
-{ "kind": "trait", "replace": { "from": ["Mechanicum", "Cybernetica", "Reductor"], "to": "Iron Tercio" } }
+{ "kind": "trait", "replace": { "from": ["Disciplined", "Drilled"], "to": "Veteran Corps" } }
 ```
 
 `replace` removes any of `from` and adds `to` only if the unit had one of them ("models replace their X trait with Y").
@@ -242,7 +242,7 @@ Effects appear on `Option.effects`, slot options, sub-faction unit modifiers and
 
 - `type` is a group type of the game. A slot is filled by a unit whose role is in `roles`; `tags` mark it for slot options; `repeat` lets the slot be added more than once; `units` (on the detachment or a slot) restricts which units may fill it, using a selector.
 - `requires` lists units the contingent (or its root group) must already hold; `when`, `min`, `max` and `cost` as above. Unavailable detachments are disabled in the builder's menus and never removed automatically.
-- `effects` (stat, special-rule and trait effects) apply to every unit in the detachment, including slots added later, for rules such as "All Models selected as part of this Detachment gain the Infantry Tercio Trait": `"effects": [{ "kind": "trait", "add": ["Infantry Tercio"] }]`. The detachment's and slots' `units` selectors see a unit's traits **before** the detachment's own effects, so a detachment can't let units in by the trait it gives them. Needs validator 1.2.0+.
+- `effects` (stat, special-rule and trait effects) apply to every unit in the detachment, including slots added later, for rules such as "Every unit in this detachment gains the Gun Line trait": `"effects": [{ "kind": "trait", "add": ["Gun Line"] }]`. The detachment's and slots' `units` selectors see a unit's traits **before** the detachment's own effects, so a detachment can't let units in by the trait it gives them. Needs validator 1.2.0+.
 
 ### Selectors
 
@@ -285,7 +285,7 @@ A modifier of a faction (an order, a regiment, a sponsor):
 
 ### Several picks per faction (sub-faction groups)
 
-When the rules let an army make more than one independent pick (a Cohort Doctrine **and** a Designation, or one Provenance plus another under a condition), declare each pick as a group on the **faction** and put each sub-faction in one:
+When the rules let an army make more than one independent pick (a doctrine **and** a heritage, or one heritage plus a second under a condition), declare each pick as a group on the **faction** and put each sub-faction in one:
 
 ```json
 // factions/field-army.json
@@ -304,9 +304,9 @@ When the rules let an army make more than one independent pick (a Cohort Doctrin
 ```
 
 - `min` defaults to 0 and `max` to 1. Both may be expressions over `contingent`, `root`, `main` and `list`.
-- Leave `group` out and the sub-faction is in the `default` group (at most one): a faction with a single pick (one Legion) needs no groups at all. Declare `default` in `subFactionGroups` if you want to name it or set `"min": 1`.
+- Leave `group` out and the sub-faction is in the `default` group (at most one): a faction with a single pick (one regiment) needs no groups at all. Declare `default` in `subFactionGroups` if you want to name it or set `"min": 1`.
 - `when` restricts a sub-faction: Traitor-only (`choice(allegiance) == traitor`), or needing another pick (`list.is(subfaction:…)`). Same scopes as the group limits.
-- **Following the main contingent.** `main` is the list's main contingent (the one whose root group has `source: main`, e.g. the Primary Detachment and the detachments linked to it). An allied contingent's sub-faction can follow it: a Designation only for a Dark Angels army is `"when": { "if": "not main.is(faction:legiones-astartes) or main.is(subfaction:dark-angels)", "message": "…" }`. When the sub-faction's own contingent is the main one, `main` is that contingent. Needs validator 1.2.0+.
+- **Following the main contingent.** `main` is the list's main contingent (the one whose root group has `source: main`, e.g. the core formation and the formations linked to it). An allied contingent's sub-faction can follow it: a sub-faction that may only serve alongside a Veterans army is `"when": { "if": "not main.is(faction:field-army) or main.is(subfaction:veterans)", "message": "…" }`. When the sub-faction's own contingent is the main one, `main` is that contingent. Needs validator 1.2.0+.
 - Sub-factions that can be taken together (different groups, or a group allowing more than one) must not define the same record or unit modifier id **differently**. Share a rule by copying it identically, or rename one. Two of them overriding the same parent record differently is an error too. Sub-factions in a group of at most one can't meet, so they may reuse ids.
 - Needs validator 1.1.0+ and an app that supports several sub-factions per contingent.
 

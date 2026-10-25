@@ -629,7 +629,7 @@ export const CompositionBlockSchema = z
             .string()
             .optional()
             .describe(
-                'shown to players, e.g. "Rapier Crew"; left out, built from the profile names'
+                'shown to players, e.g. "Gun Crew"; left out, built from the profile names'
             ),
         description: z.string().optional(),
         id: SlugSchema.describe(
@@ -638,7 +638,7 @@ export const CompositionBlockSchema = z
         profiles: z
             .record(SlugSchema, z.number())
             .describe(
-                'profile id → how many models of it one copy of the block holds, e.g. `{ "rapier-gunner": 1, "rapier-carrier": 1 }`'
+                'profile id → how many models of it one copy of the block holds, e.g. `{ "gunner": 1, "loader": 1 }`'
             ),
         min: z
             .number()
@@ -653,7 +653,7 @@ export const CompositionBlockSchema = z
         ),
     })
     .describe(
-        'A set of models bought together: the unit holds between `min` and `max` copies of it, e.g. a Rapier Crew of one Gunner and one Carrier'
+        'A set of models bought together: the unit holds between `min` and `max` copies of it, e.g. a Gun Crew of one Gunner and one Loader'
     );
 
 export const UnitSchema = z.strictObject({
@@ -814,7 +814,7 @@ export const DetachmentSchema = z.strictObject({
         .array(DetachmentEffectSchema)
         .optional()
         .describe(
-            'applied to every unit in the detachment, e.g. "All Models in this Detachment gain the Infantry Tercio Trait"'
+            'applied to every unit in the detachment, e.g. "Every unit in this detachment gains the Gun Line trait"'
         ),
 });
 

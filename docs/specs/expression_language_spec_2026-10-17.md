@@ -140,7 +140,7 @@ Rules, all checked when data loads:
 | `group` | the unit's container: a detachment, formation, retinue or team, whatever the game calls it | |
 | `contingent` | a root group plus the groups linked to it, sharing one faction source | e.g. a core or allied formation with the reserve and elite formations linked to it. Games without linking have one contingent per group, or one for the whole list |
 | `root` | the contingent's root group | a game may call it `core` |
-| `main` | the list's main contingent: the one whose root group's type has `source: main` | the same verbs as `contingent`; for the main contingent's own rules it is their `contingent`. Lets an allied contingent follow the main one, e.g. `main.is(subfaction:dark-angels)`. Added in validator 1.2.0 |
+| `main` | the list's main contingent: the one whose root group's type has `source: main` | the same verbs as `contingent`; for the main contingent's own rules it is their `contingent`. Lets an allied contingent follow the main one, e.g. `main.is(subfaction:veterans)`. Added in validator 1.2.0 |
 | `list` | the whole list | points limit, list choices, totals across all contingents |
 
 ### 8.2 Which scopes each field may use
@@ -193,7 +193,7 @@ The same kind can mean different things on different scopes; the checker knows e
 - `tag:` on `slot` means the game's slot tags; on `unit` and `profile` the unit's and profile's tags;
 - `type:` on `unit`/`profile` means unit type; on `group`/`root` group type.
 
-Traits are free text too and match the same way (`trait:infantry-tercio` for `Infantry Tercio`). A unit's traits include those effects give it (data schema spec §5.2), so the known traits are every unit's `traits` plus every trait effect's `add` and `replace.to`, across all the game's factions (`main` and `list` see other factions' units). An unknown `trait:` is a warning. On a profile, `is(trait:…)` tests its unit's traits.
+Traits are free text too and match the same way (`trait:gun-line` for `Gun Line`). A unit's traits include those effects give it (data schema spec §5.2), so the known traits are every unit's `traits` plus every trait effect's `add` and `replace.to`, across all the game's factions (`main` and `list` see other factions' units). An unknown `trait:` is a warning. On a profile, `is(trait:…)` tests its unit's traits.
 
 Unknown ids get "did you mean". Tags are free text in unit data (`Sergeant`, `Heavy Assault`), so a `tag:` reference matches them case-insensitively and writes them in id form, lowercase with hyphens (`tag:sergeant`, `tag:heavy-assault`), the same way profile filters match. An unknown `tag:` on a unit is a lint warning (no unit in the faction has it), not an error.
 
