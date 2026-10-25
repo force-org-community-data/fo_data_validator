@@ -131,23 +131,20 @@ describe('validator', () => {
     });
 });
 
-describe('grouped sub-factions', () => {
-    /* the full source with the extension, changed by `change`, and what the validator says */
-    async function issuesAfter(change: (set: GameDataSet) => void) {
-        const [set] = structuredClone(
-            await sets(
-                path.join(examples, 'full'),
-                path.join(examples, 'extension')
-            )
-        );
-        change(set);
-        return validateGameData(set).map(
-            (i) => `${i.severity} ${i.file} ${i.path}: ${i.message}`
-        );
-    }
-    const sub = (set: GameDataSet, id: string) =>
-        set.subFactions.find((s) => s.data.id === id)!.data;
+/* the full source with the extension, changed by `change`, and what the validator says */
+async function issuesAfter(change: (set: GameDataSet) => void) {
+    const [set] = structuredClone(
+        await sets(path.join(examples, 'full'), path.join(examples, 'extension'))
+    );
+    change(set);
+    return validateGameData(set).map(
+        (i) => `${i.severity} ${i.file} ${i.path}: ${i.message}`
+    );
+}
+const sub = (set: GameDataSet, id: string) =>
+    set.subFactions.find((s) => s.data.id === id)!.data;
 
+describe('grouped sub-factions', () => {
     it('reports an unknown group, with a hint', async () => {
         const issues = await issuesAfter((set) => {
             sub(set, 'coastal-heritage').group = 'heritag';
@@ -171,7 +168,7 @@ describe('grouped sub-factions', () => {
         assert.deepEqual(issues, [
             'error factions/field-army.json subFactionGroups/doctrine: min 2 is more than max 1',
             "error factions/field-army.json subFactionGroups/heritage/max: unknown unit 'walkr' (did you mean 'walker'?)",
-            "error sub-factions/highland-heritage.json when: 'unit' isn't available here (allowed: contingent, list, root)",
+            "error sub-factions/highland-heritage.json when: 'unit' isn't available here (allowed: contingent, list, main, root)",
             'error sub-factions/coastal-heritage.json when: this field needs a boolean but the expression is a number',
         ]);
     });
@@ -236,6 +233,122 @@ describe('grouped sub-factions', () => {
                 delete s.data.group;
                 delete s.data.when;
             }
+        });
+        assert.deepEqual(issues, []);
+    });
+});
+
+describe('unit composition', () => {
+    const gunTeam = (set: GameDataSet) =>
+        set.factions[0].data.units['gun-team'];
+
+    it('checks blocks against the profiles and the model count', async () => {
+        const issues = await issuesAfter((set) => {
+            const unit = gunTeam(set);
+            unit.composition![0].profiles = { gunner: 1, loadr: 1.5 };
+            unit.composition!.push({
+                id: 'spotter',
+                profiles: { gunner: 1 },
+                min: 2,
+                max: 1,
+            });
+            unit.additionalModels = { max: 1, cost: { points: 5 } };
+        });
+        assert.deepEqual(issues, [
+            "error factions/field-army.json units/gun-team/additionalModels: a unit with a composition grows through its blocks' max and cost, not additionalModels",
+            "error factions/field-army.json units/gun-team/composition/gun-crew: unknown profile 'loadr'",
+            'error factions/field-army.json units/gun-team/composition/gun-crew/profiles/loadr: a block holds a whole number of models of each profile, at least 1 (got 1.5)',
+            "error factions/field-army.json units/gun-team/composition/spotter: profile 'gunner' is also in block 'gun-crew'; a profile may be in only one block",
+            'error factions/field-army.json units/gun-team/composition/spotter: min 2 is more than max 1',
+            'error factions/field-army.json units/gun-team/modelCount: modelCount is 2, but the composition\'s blocks at their min hold 4.5 models',
+            "warning factions/field-army.json units/gun-team/composition: profile 'loader' is in no block, so no model uses it",
+        ]);
+    });
+
+    it('needs a cost where the unit can grow', async () => {
+        const issues = await issuesAfter((set) => {
+            delete gunTeam(set).composition![0].cost;
+        });
+        assert.deepEqual(issues, [
+            'error factions/field-army.json units/gun-team/composition/gun-crew: a block the unit can add copies of needs a cost per copy',
+        ]);
+    });
+
+    it('accepts fixed blocks and optional blocks', async () => {
+        const issues = await issuesAfter((set) => {
+            const unit = gunTeam(set);
+            unit.composition = [
+                { id: 'gunner', profiles: { gunner: 1 } },
+                {
+                    id: 'loaders',
+                    profiles: { loader: 1 },
+                    min: 0,
+                    max: 2,
+                    cost: { points: 10 },
+                },
+            ];
+            unit.modelCount = 1;
+        });
+        assert.deepEqual(issues, []);
+    });
+});
+
+describe('traits', () => {
+    it('checks trait effects, with no profile scope in their conditions', async () => {
+        const issues = await issuesAfter((set) => {
+            const gunLine = set.factions[0].data.detachments['gun-line'];
+            gunLine.effects = [
+                { kind: 'trait' },
+                {
+                    kind: 'trait',
+                    add: ['Gun Line'],
+                    remove: ['gun line'],
+                    when: {
+                        if: 'profile.is(tag:sergeant)',
+                        message: 'Sergeants only',
+                    },
+                },
+                { kind: 'trait', replace: { from: [], to: 'Gun Line' } },
+            ];
+        });
+        assert.deepEqual(issues, [
+            'error factions/field-army.json detachments/gun-line/effects/0: a trait effect needs add, remove or replace',
+            "warning factions/field-army.json detachments/gun-line/effects/1: 'Gun Line' is both given and taken away",
+            "error factions/field-army.json detachments/gun-line/effects/1/when: 'profile' isn't available here (allowed: contingent, group, list, main, root, slot, unit)",
+            'error factions/field-army.json detachments/gun-line/effects/2: replace needs at least one trait in from',
+        ]);
+    });
+
+    it('checks the rest of a detachment effect like any effect', async () => {
+        const issues = await issuesAfter((set) => {
+            const gunLine = set.factions[0].data.detachments['gun-line'];
+            gunLine.effects!.push({
+                kind: 'specialRule',
+                rule: { id: 'stubborn' },
+            });
+        });
+        assert.deepEqual(issues, [
+            "error factions/field-army.json detachments/gun-line/effects/2: unknown special rule 'stubborn'",
+        ]);
+    });
+
+    it('warns on selector traits no unit has or is given', async () => {
+        const issues = await issuesAfter((set) => {
+            sub(set, 'veterans').unitModifiers!['veteran-corps'].selector = {
+                traits: ['Disiplined'],
+            };
+        });
+        assert.deepEqual(issues, [
+            "warning sub-factions/veterans.json unitModifiers/veteran-corps: no unit has or is given the trait 'Disiplined' (did you mean 'disciplined'?)",
+        ]);
+    });
+
+    it('knows traits given by effects in other factions', async () => {
+        const issues = await issuesAfter((set) => {
+            sub(set, 'irregulars').when = {
+                if: 'main.has(trait:veteran-corps) or main.has(trait:gun-line)',
+                message: 'Only alongside veterans or a gun line',
+            };
         });
         assert.deepEqual(issues, []);
     });

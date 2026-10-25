@@ -154,6 +154,17 @@
                 }
             ]
         },
+        "veteran-corps": {
+            "id": "veteran-corps",
+            "name": "Veteran Corps",
+            "selector": { "traits": ["Disciplined"] },
+            "actions": [
+                {
+                    "kind": "trait",
+                    "replace": { "from": ["Disciplined"], "to": "Veteran Corps" }
+                }
+            ]
+        },
         "no-walkers": {
             "id": "no-walkers",
             "name": "No Walkers",

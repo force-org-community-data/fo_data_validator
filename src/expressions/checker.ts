@@ -24,6 +24,8 @@ export const BUILT_IN_SCOPES = [
     'group',
     'contingent',
     'root',
+    /** the list's main contingent (its root group's type has `source: main`) */
+    'main',
     'list',
 ] as const;
 
@@ -32,21 +34,48 @@ export type BuiltInScope = (typeof BUILT_IN_SCOPES)[number];
 /** Scopes each kind of field may use (spec §8.2) */
 export const FIELD_SCOPES = {
     /** a detachment's `when`: whether it can be added */
-    detachmentWhen: ['contingent', 'root', 'list'],
+    detachmentWhen: ['contingent', 'root', 'main', 'list'],
     /** a detachment's `min` / `max`, checked once it's in the list */
-    detachmentLimit: ['group', 'contingent', 'root', 'list'],
-    slot: ['slot', 'group', 'contingent', 'root', 'list'],
-    unit: ['unit', 'slot', 'group', 'contingent', 'root', 'list'],
+    detachmentLimit: ['group', 'contingent', 'root', 'main', 'list'],
+    slot: ['slot', 'group', 'contingent', 'root', 'main', 'list'],
+    unit: ['unit', 'slot', 'group', 'contingent', 'root', 'main', 'list'],
     /** add `profile` when the upgrade has a `profileId` */
-    upgrade: ['unit', 'slot', 'group', 'contingent', 'root', 'list'],
+    upgrade: ['unit', 'slot', 'group', 'contingent', 'root', 'main', 'list'],
     /** add `profile` when the option's upgrade has a `profileId` */
-    option: ['option', 'unit', 'slot', 'group', 'contingent', 'root', 'list'],
-    effect: ['profile', 'unit', 'slot', 'group', 'contingent', 'root', 'list'],
+    option: [
+        'option',
+        'unit',
+        'slot',
+        'group',
+        'contingent',
+        'root',
+        'main',
+        'list',
+    ],
+    effect: [
+        'profile',
+        'unit',
+        'slot',
+        'group',
+        'contingent',
+        'root',
+        'main',
+        'list',
+    ],
     /** a special rule's `grants` */
-    ruleGrant: ['rule', 'unit', 'slot', 'group', 'contingent', 'root', 'list'],
-    list: ['list'],
+    ruleGrant: [
+        'rule',
+        'unit',
+        'slot',
+        'group',
+        'contingent',
+        'root',
+        'main',
+        'list',
+    ],
+    list: ['main', 'list'],
     /** a sub-faction's `when` and its group's `min` / `max`, for the contingent it's taken for */
-    subFaction: ['contingent', 'root', 'list'],
+    subFaction: ['contingent', 'root', 'main', 'list'],
 } satisfies Record<string, ReadonlyArray<BuiltInScope>>;
 
 /** What a game (and the faction an expression sits in) defines */
@@ -67,6 +96,8 @@ export type ExpressionVocabulary = {
     slotTags: ReadonlyArray<string>;
     /** tags used on units and profiles; tags are free text, so an unknown one is only a warning */
     tags: ReadonlyArray<string>;
+    /** traits units have or effects give, in any faction of the game; free text, so an unknown one is only a warning */
+    traits?: ReadonlyArray<string>;
     /** resource id → where it's spent */
     resources: Record<string, 'list' | 'unit' | 'contingent'>;
     /** list choice id → its value ids */
@@ -94,6 +125,8 @@ export type ReferenceKind =
     | 'role'
     | 'unitType'
     | 'unitTag'
+    /** a unit trait, in `tagId` form */
+    | 'trait'
     | 'selector'
     | 'weapon'
     | 'equipment'
@@ -131,7 +164,7 @@ const NUMBER: ExpressionType = { kind: 'number' };
 const BOOLEAN: ExpressionType = { kind: 'boolean' };
 
 const GLOBAL_FUNCTIONS = ['choice', 'floor', 'ceil', 'min', 'max'];
-const UNIT_KINDS = ['unit', 'role', 'type', 'tag'];
+const UNIT_KINDS = ['unit', 'role', 'type', 'tag', 'trait'];
 const WARGEAR_KINDS = ['weapon', 'equipment'];
 const REFERENCE_KINDS = [
     ...UNIT_KINDS,
@@ -146,19 +179,29 @@ const NON_NEGATIVE = ['count', 'sum', 'limit', 'models', 'picks'];
 /** Which reference kinds `is()` accepts on each scope */
 const IS_KINDS: Partial<Record<BuiltInScope, Array<string>>> = {
     unit: [...UNIT_KINDS, 'selector'],
-    profile: ['type', 'tag'],
+    profile: ['type', 'tag', 'trait'],
     slot: ['tag', 'role'],
     group: ['type', 'group'],
     root: ['type', 'group'],
     contingent: ['faction', 'subfaction'],
+    main: ['faction', 'subfaction'],
     list: ['faction', 'subfaction'],
 };
 
 const VERBS: Record<string, ReadonlyArray<BuiltInScope>> = {
-    count: ['profile', 'unit', 'group', 'contingent', 'root', 'list'],
-    has: ['profile', 'unit', 'group', 'contingent', 'root', 'list'],
-    is: ['profile', 'unit', 'slot', 'group', 'root', 'contingent', 'list'],
-    sum: ['unit', 'group', 'contingent', 'root', 'list'],
+    count: ['profile', 'unit', 'group', 'contingent', 'root', 'main', 'list'],
+    has: ['profile', 'unit', 'group', 'contingent', 'root', 'main', 'list'],
+    is: [
+        'profile',
+        'unit',
+        'slot',
+        'group',
+        'root',
+        'contingent',
+        'main',
+        'list',
+    ],
+    sum: ['unit', 'group', 'contingent', 'root', 'main', 'list'],
     limit: ['list', 'unit'],
     models: ['unit'],
     picks: ['option'],
@@ -496,7 +539,8 @@ class Checker {
         if (scope !== 'profile' && scope !== 'unit')
             kinds.push(...UNIT_KINDS, 'selector');
         kinds.push(...WARGEAR_KINDS);
-        if (scope === 'contingent' || scope === 'list') kinds.push('group');
+        if (scope === 'contingent' || scope === 'main' || scope === 'list')
+            kinds.push('group');
 
         const kind = isReference(arg)
             ? arg.type === 'selector'
@@ -702,6 +746,17 @@ class Checker {
                     );
                 }
                 return this.resolved(arg, 'unitTag', true);
+            case 'trait': {
+                const traits = (v.traits ?? []).map(tagId);
+                if (!traits.includes(arg.id)) {
+                    this.report(
+                        'warning',
+                        `no unit has or is given the trait '${arg.id}'${didYouMean(arg.id, traits)}`,
+                        arg
+                    );
+                }
+                return this.resolved(arg, 'trait', true);
+            }
             case 'weapon':
                 return this.resolved(
                     arg,

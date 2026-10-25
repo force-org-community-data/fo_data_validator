@@ -389,6 +389,66 @@
                     }
                 }
             ]
+        },
+        "gun-team": {
+            "id": "gun-team",
+            "name": "Gun Team",
+            "description": "A composition block of two profiles: each Gun Crew is a Gunner and a Loader, bought together.",
+            "role": "support",
+            "type": "infantry",
+            "traits": ["Field Army"],
+            "cost": { "points": 40 },
+            "modelCount": 2,
+            "composition": [
+                {
+                    "id": "gun-crew",
+                    "name": "Gun Crew",
+                    "profiles": { "gunner": 1, "loader": 1 },
+                    "min": 1,
+                    "max": 3,
+                    "cost": { "points": 35 }
+                }
+            ],
+            "profiles": [
+                {
+                    "id": "gunner",
+                    "name": "Gunner",
+                    "template": "infantry",
+                    "stats": {
+                        "move": "5",
+                        "skill": "4",
+                        "wounds": "1",
+                        "morale": "6",
+                        "save": "5+"
+                    }
+                },
+                {
+                    "id": "loader",
+                    "name": "Loader",
+                    "template": "infantry",
+                    "stats": {
+                        "move": "5",
+                        "skill": "5",
+                        "wounds": "1",
+                        "morale": "6",
+                        "save": "5+"
+                    }
+                }
+            ],
+            "defaultWargear": [
+                {
+                    "kind": "weapon",
+                    "id": "cannon",
+                    "perModel": true,
+                    "profileId": "gunner"
+                },
+                {
+                    "kind": "weapon",
+                    "id": "rifle",
+                    "perModel": true,
+                    "profileId": "loader"
+                }
+            ]
         }
     },
     "weapons": {
@@ -499,6 +559,32 @@
                 { "units": { "unitIds": ["general"] } }
             ],
             "requirementText": "Needs two line troop units in its Core Formation and a General"
+        },
+        "gun-line": {
+            "id": "gun-line",
+            "name": "Gun Line",
+            "description": "Every unit in it gains the Gun Line trait, and its gunners are steadier.",
+            "type": "reserve",
+            "slots": [
+                {
+                    "roles": ["support"],
+                    "units": { "traits": ["Field Army"] },
+                    "repeat": { "min": 1, "max": 3 }
+                }
+            ],
+            "max": 1,
+            "effects": [
+                { "kind": "trait", "add": ["Gun Line"] },
+                {
+                    "kind": "stat",
+                    "profiles": { "noneOf": ["Sergeant"] },
+                    "changes": [{ "stat": "morale", "op": "add", "value": 1 }],
+                    "when": {
+                        "if": "group.count(unit:gun-team) >= 2",
+                        "message": "Needs two Gun Teams in the Gun Line"
+                    }
+                }
+            ]
         }
     },
     "selectors": {
@@ -512,10 +598,11 @@
         "field-promotion": {
             "id": "field-promotion",
             "name": "Field Promotion",
-            "text": "The unit in this slot gains the Disciplined rule.",
+            "text": "The unit in this slot gains the Disciplined rule and the Promoted trait.",
             "slotTag": "prime",
             "effects": [
-                { "kind": "specialRule", "rule": { "id": "disciplined" } }
+                { "kind": "specialRule", "rule": { "id": "disciplined" } },
+                { "kind": "trait", "add": ["Promoted"] }
             ]
         }
     },

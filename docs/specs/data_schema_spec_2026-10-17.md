@@ -190,7 +190,7 @@ A **sub-faction** (`SubFaction`) is a modifier of its parent:
 
 - `parent: { faction, versions? }` may name a faction from another source in the same game (`examples/extension/sub-factions/irregulars.json`).
 - **`overrides`** lists records that intentionally replace the parent's (same kind and id). Any other id collision with the parent is an error, so accidental overrides can't happen.
-- **Unit modifiers** pick units with a selector and apply actions (`addUpgrade`, stat and special-rule effects, or **`unavailable`**: matched units can't be taken, with a message). This is how a sub-faction bans units:
+- **Unit modifiers** pick units with a selector and apply actions (`addUpgrade`, stat, special-rule and trait effects (§5.2), or **`unavailable`**: matched units can't be taken, with a message). This is how a sub-faction bans units:
 
     ```json
     "no-walkers": {
@@ -214,9 +214,10 @@ A contingent may take **several sub-factions of its faction**: one pick per inde
 }
 ```
 
-- A group's **`min`** (default 0) and **`max`** (default 1) are how many of its sub-factions a contingent must / may take. They're numbers or expressions in the `contingent`, `root` and `list` scopes, evaluated for the contingent taking them.
+- A group's **`min`** (default 0) and **`max`** (default 1) are how many of its sub-factions a contingent must / may take. They're numbers or expressions in the `contingent`, `root`, `main` and `list` scopes, evaluated for the contingent taking them.
 - **The `default` group.** A sub-faction without `group` is in the group `default`, which has `max: 1` unless declared: one sub-faction per faction, as before groups existed. A faction may declare `default` in `subFactionGroups` to name it or change its limits (`"min": 1` to require a pick); `"group": "default"` means the same as leaving `group` out. Any other `group` must be declared by the parent; an unknown one is an error.
-- A sub-faction's **`when`** (a condition) says when it may be taken: `choice(allegiance) == traitor`, or `list.has(subfaction:…)` for one that needs another pick. Its expression sees `contingent`, `root` and `list` for the contingent it is taken for. The app re-checks it whenever the list changes; a sub-faction whose `when` stops holding is a list issue, not removed.
+- A sub-faction's **`when`** (a condition) says when it may be taken: `choice(allegiance) == traitor`, or `list.has(subfaction:…)` for one that needs another pick. Its expression sees `contingent`, `root`, `main` and `list` for the contingent it is taken for. The app re-checks it whenever the list changes; a sub-faction whose `when` stops holding is a list issue, not removed.
+- **Following the main contingent** (validator 1.2.0). `main` is the list's main contingent, the one whose root group's type has `source: main`. An allied contingent's pick can depend on it: `not main.is(faction:legiones-astartes) or main.is(subfaction:dark-angels)` (a Designation bonded to one Legion). For the main contingent's own picks, `main` is that contingent. The main contingent's picks are usually made first, but nothing depends on the order: every `when` is re-checked live, so changing the main pick turns an ally's pick that no longer fits into a list issue.
 - **`subfaction:` references** (`contingent.is(subfaction:x)`, `list.is(subfaction:x)`) are true when `x` is any of the sub-factions taken.
 - **Combining sub-factions.** Sub-factions that can be taken together are merged into the parent in one go: two in different groups, or two in one group whose `max` is an expression or more than 1. Such sub-factions must not define a record (same kind and id) or a unit modifier (same id) **differently**; identical copies are fine and are merged as one. Two of them overriding the same parent record is the same error unless their replacements are identical: there is no "last group wins". Sub-factions that can't be taken together (two in a group of at most one) may reuse ids freely. Each sub-faction is still checked against its parent alone, and collisions with the parent's records stay governed by `overrides`.
 - **Saved lists** (the Force Org app, a separate repository). A contingent holds its picks as a list of sub-faction ids (`subFactions: string[]`, in the order picked) rather than one `subFaction`; the app checks each group's `min` / `max` and each pick's `when`, and merges the picks into the parent in group order (the order of `subFactionGroups`, `default` first). Data using `group` or `subFactionGroups` needs validator 1.1.0 or later and an app version that supports several sub-factions.
@@ -245,8 +246,58 @@ A contingent may take **several sub-factions of its faction**: one pick per inde
 
 - `role` and `type` are game ids; `tags` (on units and profiles) are matched by `tag:` references and profile filters.
 - Profiles always have an `id` and a `template`.
-- `excludeProfiles` (a `ProfileFilter`) leaves profiles out of default wargear and per-model config.
+- `excludeProfiles` (a `ProfileFilter`) leaves profiles out of default wargear and per-model config. `perModel` with a `profileId` gives one to each model of that profile.
+- **`traits`** are free text, matched case-insensitively by `trait:` references (expression spec §9) and selector `traits` (§8). Effects can change them (§5.2).
 - **`when`** limits when the unit may be taken. **`limit`** caps how many a group, contingent or list may hold, with an optional expression (`militia` in `examples/extension`: "one, plus one per two Infantry Squads").
+
+### 5.1 Composition blocks
+
+`modelCount` and `additionalModels` give a unit's size, not which profile each model uses. A unit may instead list **composition blocks** (validator 1.2.0): sets of models bought together, each held between `min` and `max` times.
+
+```json
+"gun-team": {
+    "cost": { "points": 40 },
+    "modelCount": 2,
+    "composition": [
+        { "id": "gun-crew", "name": "Gun Crew", "profiles": { "gunner": 1, "loader": 1 },
+          "min": 1, "max": 3, "cost": { "points": 35 } }
+    ],
+    "profiles": [ { "id": "gunner", … }, { "id": "loader", … } ],
+    "defaultWargear": [
+        { "kind": "weapon", "id": "cannon", "perModel": true, "profileId": "gunner" },
+        { "kind": "weapon", "id": "rifle", "perModel": true, "profileId": "loader" }
+    ]
+}
+```
+
+A block is `{ id, name?, description?, profiles, min?, max?, cost? }`:
+
+- `profiles`: profile id → models of it in **one copy** of the block (a whole number, at least 1).
+- `min` (default 1): the copies the unit's `cost` buys. `max` (default `min`): the most copies allowed. `min: 0` makes a block optional.
+- `cost`: what each copy above `min` costs, counted like additional-model costs (resource `usedFor: additionalModels`). Required when `max` > `min`.
+
+Checks: block ids are unique; profile ids exist; a profile is in at most one block (a profile in none has no models, which is a warning); `min` ≤ `max`, both whole; `modelCount` (still required, so older readers see the base unit) equals Σ `min` × models per copy, and isn't 0; `additionalModels` isn't used alongside `composition`.
+
+What the app derives from them:
+
+- the live count of each profile: copies of its block × its number in the block;
+- `unit.models()`: the sum of the live counts;
+- the extra cost: Σ (copies − `min`) × the block's `cost`;
+- `perModel` default wargear: one per model of each profile not excluded (only of `profileId`'s profile when given);
+- per-model upgrades (`every`, `some`, `one-in-x`, `max`): counted from the live counts, of the upgrade's `profileId` profile when it has one.
+
+A saved list's unit records `composition: { [blockId]: copies }` instead of `additionalModels`. Units without `composition` behave as before; their profile counts stay unknown.
+
+### 5.2 Trait effects
+
+```json
+{ "kind": "trait", "add": ["Infantry Tercio"] }
+{ "kind": "trait", "replace": { "from": ["Mechanicum", "Cybernetica", "Reductor"], "to": "Iron Tercio" }, "when": { … } }
+```
+
+A trait effect (validator 1.2.0) changes a unit's `traits`: `add` gives traits, `remove` takes them away if present, and `replace` takes away any of `from` and gives `to` only if one was there. Traits belong to the whole unit, so there is no profile filter and its `when` has no `profile` scope. It may appear wherever stat and special-rule effects do: option `effects`, slot-option `effects`, unit-modifier `actions` and detachment `effects` (§7). At least one of `add`, `remove` and `replace` is required; a trait both given and taken away is a warning.
+
+**Order.** The app resolves a unit's traits in steps: the unit's own `traits`, then sub-faction unit modifiers, option effects, the detachment's effects, and slot-option effects. Each step's conditions see the traits from the steps before it. A detachment's and its slots' `units` selectors see the unit's traits before the detachment's and slot options' effects (a detachment can't admit units by the trait it gives them). Everything else (`trait:` references in other expressions, list rules) sees the final traits.
 
 ## 6. Upgrades and options
 
@@ -297,6 +348,7 @@ A unit's upgrades hold options or references to faction upgrades, and may use `r
 - **Slots** have `roles` (one or more), optional `tags` (e.g. `prime`), `required` (compulsory slots), `units` (a `UnitSelector`), `when`, and **`repeat`**: the slot may be added more than once, each copy holding one unit. That covers a team of vehicles (`{ "min": 1 }`) and optional slots.
 - `requires[].scope` is `contingent` (default) or `root`.
 - Detachments may have `when`, `min` and `max`. `min` makes a detachment mandatory, e.g. a required veteran formation.
+- **`effects`** (validator 1.2.0): stat, special-rule and trait effects applied to every unit in the detachment, including units in slots a slot option adds. "All Models selected as part of this Detachment gain the Infantry Tercio Trait" is `"effects": [{ "kind": "trait", "add": ["Infantry Tercio"] }]`. Each effect may carry `profiles` (stat and special-rule effects) and `when`.
 
 ## 8. Selectors
 
@@ -320,6 +372,8 @@ Named `UnitSelector`s, referenced in expressions as `@line-troops`. They live in
 ```
 
 A named selector's own `match` is always inline, so selectors can't refer to each other.
+
+**`traits`** (validator 1.2.0) matches a unit with any of the listed traits, case-insensitively: `{ "traits": ["Field Army"] }`. A trait no unit has or is given is a warning. Profile filters don't match traits; use `when: unit.is(trait:…)` on an effect instead.
 
 ## 9. Expressions in data
 
