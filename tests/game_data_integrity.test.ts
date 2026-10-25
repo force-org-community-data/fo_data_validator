@@ -130,3 +130,113 @@ describe('validator', () => {
         );
     });
 });
+
+describe('grouped sub-factions', () => {
+    /* the full source with the extension, changed by `change`, and what the validator says */
+    async function issuesAfter(change: (set: GameDataSet) => void) {
+        const [set] = structuredClone(
+            await sets(
+                path.join(examples, 'full'),
+                path.join(examples, 'extension')
+            )
+        );
+        change(set);
+        return validateGameData(set).map(
+            (i) => `${i.severity} ${i.file} ${i.path}: ${i.message}`
+        );
+    }
+    const sub = (set: GameDataSet, id: string) =>
+        set.subFactions.find((s) => s.data.id === id)!.data;
+
+    it('reports an unknown group, with a hint', async () => {
+        const issues = await issuesAfter((set) => {
+            sub(set, 'coastal-heritage').group = 'heritag';
+        });
+        assert.deepEqual(issues, [
+            "error sub-factions/coastal-heritage.json group: 'field-army' has no sub-faction group 'heritag' (did you mean 'heritage'?)",
+        ]);
+    });
+
+    it('checks group limits and sub-faction conditions', async () => {
+        const issues = await issuesAfter((set) => {
+            const groups = set.factions[0].data.subFactionGroups!;
+            groups['heritage'].max = 'list.has(unit:walkr)';
+            groups['doctrine'].min = 2;
+            sub(set, 'coastal-heritage').when!.if = 'list.count(unit:walker)';
+            sub(set, 'highland-heritage').when = {
+                if: 'unit.has(unit:walker)',
+                message: 'Never',
+            };
+        });
+        assert.deepEqual(issues, [
+            'error factions/field-army.json subFactionGroups/doctrine: min 2 is more than max 1',
+            "error factions/field-army.json subFactionGroups/heritage/max: unknown unit 'walkr' (did you mean 'walker'?)",
+            "error sub-factions/highland-heritage.json when: 'unit' isn't available here (allowed: contingent, list, root)",
+            'error sub-factions/coastal-heritage.json when: this field needs a boolean but the expression is a number',
+        ]);
+    });
+
+    it('allows identical records in sub-factions taken together', async () => {
+        // both heritages define the same local-knowledge rule (see the example)
+        assert.deepEqual(await issuesAfter(() => {}), []);
+    });
+
+    it('reports different records in sub-factions taken together', async () => {
+        const issues = await issuesAfter((set) => {
+            sub(set, 'coastal-heritage').specialRules![
+                'local-knowledge'
+            ].text = 'Something else.';
+            sub(set, 'siege-doctrine').unitModifiers = {
+                tough: {
+                    id: 'tough',
+                    name: 'Tough',
+                    selector: {},
+                    actions: [],
+                },
+            };
+            sub(set, 'highland-heritage').unitModifiers = {
+                tough: {
+                    id: 'tough',
+                    name: 'Tougher',
+                    selector: {},
+                    actions: [],
+                },
+            };
+        });
+        assert.deepEqual(issues, [
+            "error sub-factions/highland-heritage.json unitModifiers/tough: sub-faction 'siege-doctrine' (sub-factions/siege-doctrine.json) also defines unitModifiers 'tough', differently, and both can be taken together (they're in groups 'doctrine' and 'heritage'); make them identical or rename one",
+            "error sub-factions/coastal-heritage.json specialRules/local-knowledge: sub-faction 'highland-heritage' (sub-factions/highland-heritage.json) also defines specialRules 'local-knowledge', differently, and both can be taken together (group 'heritage' allows more than one); make them identical or rename one",
+        ]);
+    });
+
+    it('allows the same ids in a group of one', async () => {
+        // the doctrines both define `drill`, differently, but only one can be taken
+        const issues = await issuesAfter(() => {});
+        assert.ok(!issues.some((i) => i.includes('drill')));
+    });
+
+    it('reports two overrides of one parent record taken together', async () => {
+        // veterans and irregulars (no group) both override `disciplined`
+        const issues = await issuesAfter((set) => {
+            set.factions[0].data.subFactionGroups!['default'] = {
+                id: 'default',
+                name: 'Regiment',
+                max: 2,
+            };
+        });
+        assert.deepEqual(issues, [
+            "error sub-factions/irregulars.json specialRules/disciplined: sub-faction 'veterans' (sub-factions/veterans.json) also overrides the parent's specialRules 'disciplined', differently, and both can be taken together (group 'default' allows more than one); make the replacements identical, or keep the two from being taken together",
+        ]);
+    });
+
+    it('still accepts sub-factions without groups', async () => {
+        const issues = await issuesAfter((set) => {
+            delete set.factions[0].data.subFactionGroups;
+            for (const s of set.subFactions) {
+                delete s.data.group;
+                delete s.data.when;
+            }
+        });
+        assert.deepEqual(issues, []);
+    });
+});

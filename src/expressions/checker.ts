@@ -45,6 +45,8 @@ export const FIELD_SCOPES = {
     /** a special rule's `grants` */
     ruleGrant: ['rule', 'unit', 'slot', 'group', 'contingent', 'root', 'list'],
     list: ['list'],
+    /** a sub-faction's `when` and its group's `min` / `max`, for the contingent it's taken for */
+    subFaction: ['contingent', 'root', 'list'],
 } satisfies Record<string, ReadonlyArray<BuiltInScope>>;
 
 /** What a game (and the faction an expression sits in) defines */

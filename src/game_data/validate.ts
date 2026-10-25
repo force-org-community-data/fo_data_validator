@@ -7,6 +7,8 @@ import {
     BuiltInScope,
     BUILT_IN_SCOPES,
 } from '../expressions/checker';
+import { didYouMean } from '../expressions/diagnostics';
+import { DEFAULT_SUB_FACTION_GROUP } from './schema';
 import type {
     Condition,
     Detachment,
@@ -23,6 +25,7 @@ import type {
     SpecialRuleSelection,
     StatEffect,
     SubFaction,
+    SubFactionGroup,
     Unit,
     UnitSelectorOrRef,
     Upgrade,
@@ -70,6 +73,27 @@ const RECORD_KINDS = [
 ] as const satisfies ReadonlyArray<keyof FactionRecords>;
 
 const keys = (record?: object) => Object.keys(record ?? {});
+
+/* Structural equality of JSON data */
+function sameData(a: unknown, b: unknown): boolean {
+    if (a === b) return true;
+    if (typeof a !== 'object' || typeof b !== 'object' || !a || !b)
+        return false;
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+    const ak = Object.keys(a);
+    const bk = Object.keys(b);
+    return (
+        ak.length === bk.length &&
+        ak.every(
+            (k) =>
+                k in b &&
+                sameData(
+                    (a as Record<string, unknown>)[k],
+                    (b as Record<string, unknown>)[k]
+                )
+        )
+    );
+}
 
 const TARGET_NAMES: Record<CostTarget, string> = {
     unit: 'unit costs',
@@ -169,13 +193,11 @@ class Validator {
         lint?: ExpressionField['lint']
     ) {
         if (!condition) return;
+        const at = path ? `${path}/when` : 'when';
         if (!condition.message?.trim())
-            this.report(
-                `${path}/when`,
-                'a condition needs a message for players'
-            );
+            this.report(at, 'a condition needs a message for players');
         this.expression(
-            `${path}/when`,
+            at,
             condition.if,
             scopes,
             'boolean',
@@ -199,6 +221,7 @@ class Validator {
             this.file = sub.file;
             this.subFaction(sub.data);
         }
+        for (const faction of factions) this.combinedSubFactions(faction.data);
         return this.issues;
     }
 
@@ -485,7 +508,93 @@ class Validator {
                 );
         }
 
-        this.records(faction, this.scopeFor([faction]));
+        const scope = this.scopeFor([faction]);
+        this.records(faction, scope);
+
+        this.ids('subFactionGroups', faction.subFactionGroups);
+        for (const group of Object.values(faction.subFactionGroups ?? {})) {
+            const at = `subFactionGroups/${group.id}`;
+            this.numberOrExpr(
+                `${at}/min`,
+                group.min,
+                FIELD_SCOPES.subFaction,
+                scope.vocabulary
+            );
+            this.numberOrExpr(
+                `${at}/max`,
+                group.max,
+                FIELD_SCOPES.subFaction,
+                scope.vocabulary
+            );
+            const min = group.min ?? 0;
+            const max = group.max ?? 1;
+            if (typeof min === 'number' && typeof max === 'number' && min > max)
+                this.report(at, `min ${min} is more than max ${max}`);
+        }
+    }
+
+    /* The group a sub-faction is in, or undefined when it names an unknown one */
+    private groupOf(
+        sub: SubFaction,
+        parent: Faction
+    ): { id: string; group?: SubFactionGroup } | undefined {
+        const id = sub.group ?? DEFAULT_SUB_FACTION_GROUP;
+        const group = parent.subFactionGroups?.[id];
+        if (!group && id !== DEFAULT_SUB_FACTION_GROUP) return undefined;
+        return { id, group };
+    }
+
+    /*
+     * Sub-factions of the same parent that a contingent can take together (in
+     * different groups, or in one group whose max may exceed 1) are merged into
+     * one set of records, so they must not define the same record or unit
+     * modifier differently. Identical copies are fine. Reported in the later
+     * file. Each sub-faction was already checked against its parent alone.
+     */
+    private combinedSubFactions(parent: Faction) {
+        const subs = this.set.subFactions.filter(
+            (s) => s.data.parent.faction === parent.id
+        );
+        const multiple = (group?: SubFactionGroup) => {
+            const max = group?.max ?? 1;
+            return typeof max === 'string' || max > 1;
+        };
+        subs.forEach((b, j) => {
+            const bGroup = this.groupOf(b.data, parent);
+            if (!bGroup) return;
+            for (const a of subs.slice(0, j)) {
+                const aGroup = this.groupOf(a.data, parent);
+                if (!aGroup) continue;
+                if (aGroup.id === bGroup.id && !multiple(aGroup.group))
+                    continue;
+                this.file = b.file;
+                const other = `sub-faction '${a.data.id}' (${a.file})`;
+                const why =
+                    aGroup.id === bGroup.id
+                        ? `group '${aGroup.id}' allows more than one`
+                        : `they're in groups '${aGroup.id}' and '${bGroup.id}'`;
+                for (const kind of [...RECORD_KINDS, 'unitModifiers'] as const) {
+                    const mine = (b.data[kind] ?? {}) as Record<string, unknown>;
+                    const theirs = (a.data[kind] ?? {}) as Record<
+                        string,
+                        unknown
+                    >;
+                    for (const id of keys(mine)) {
+                        if (!(id in theirs) || sameData(mine[id], theirs[id]))
+                            continue;
+                        const overridden =
+                            kind !== 'unitModifiers' &&
+                            id in ((parent[kind] as object) ?? {});
+                        this.report(
+                            `${kind}/${id}`,
+                            overridden
+                                ? `${other} also overrides the parent's ${kind} '${id}', differently, and both can be taken together (${why}); make the replacements identical, or keep the two from being taken together`
+                                : `${other} also defines ${kind} '${id}', differently, and both can be taken together (${why}); make them identical or rename one`
+                        );
+                    }
+                }
+            }
+        });
     }
 
     private subFaction(sub: SubFaction) {
@@ -529,6 +638,18 @@ class Validator {
 
         const scope = this.scopeFor([parent, sub]);
         this.records(sub, scope);
+
+        if (!this.groupOf(sub, parent)) {
+            const groups = [
+                DEFAULT_SUB_FACTION_GROUP,
+                ...keys(parent.subFactionGroups),
+            ];
+            this.report(
+                'group',
+                `'${parent.id}' has no sub-faction group '${sub.group}'${didYouMean(sub.group!, groups)}`
+            );
+        }
+        this.condition('', sub.when, FIELD_SCOPES.subFaction, scope.vocabulary);
 
         for (const modifier of Object.values(sub.unitModifiers ?? {})) {
             const path = `unitModifiers/${modifier.id}`;

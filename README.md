@@ -137,7 +137,9 @@ Change a schema, then run `npm run generate-schema`; a test fails when `schema/`
 
 ## Versions
 
-`SCHEMA_VERSION` (data format) and `EXPRESSION_VERSION` (expression language) only go up on incompatible changes. The package's semver major bumps whenever either does.
+`SCHEMA_VERSION` (data format) and `EXPRESSION_VERSION` (expression language) only go up on incompatible changes. The package's semver major bumps whenever either does. See [CHANGELOG.md](CHANGELOG.md).
+
+Data that uses sub-faction groups (`subFactionGroups`, a sub-faction's `group` or `when`) needs validator **1.1.0** or later, and a Force Org app that supports several sub-factions per contingent.
 
 ## Releasing
 

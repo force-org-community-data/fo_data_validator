@@ -48,11 +48,17 @@
         "parent": {
             "$ref": "#/definitions/__schema93"
         },
-        "overrides": {
+        "group": {
             "$ref": "#/definitions/__schema94"
         },
-        "unitModifiers": {
+        "when": {
+            "$ref": "#/definitions/__schema95"
+        },
+        "overrides": {
             "$ref": "#/definitions/__schema96"
+        },
+        "unitModifiers": {
+            "$ref": "#/definitions/__schema98"
         }
     },
     "required": [
@@ -1774,14 +1780,30 @@
             "additionalProperties": false
         },
         "__schema94": {
-            "description": "records that intentionally replace the parent's (same kind and id); any other collision is an error",
+            "description": "one of the parent's `subFactionGroups`; left out, the `default` group. Sub-factions that can be taken together (different groups, or one group whose `max` may exceed 1) must not define the same record differently",
             "allOf": [
                 {
-                    "$ref": "#/definitions/__schema95"
+                    "$ref": "#/definitions/__schema3"
                 }
             ]
         },
         "__schema95": {
+            "description": "when the sub-faction may be taken, checked for the contingent it is taken for. Expressions may use `contingent`, `root` and `list`, e.g. `choice(allegiance) == traitor`",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema34"
+                }
+            ]
+        },
+        "__schema96": {
+            "description": "records that intentionally replace the parent's (same kind and id); any other collision is an error",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema97"
+                }
+            ]
+        },
+        "__schema97": {
             "type": "array",
             "items": {
                 "type": "object",
@@ -1811,7 +1833,7 @@
                 "additionalProperties": false
             }
         },
-        "__schema96": {
+        "__schema98": {
             "type": "object",
             "propertyNames": {
                 "$ref": "#/definitions/__schema3"
@@ -1832,7 +1854,7 @@
                         "$ref": "#/definitions/__schema66"
                     },
                     "actions": {
-                        "$ref": "#/definitions/__schema97"
+                        "$ref": "#/definitions/__schema99"
                     }
                 },
                 "required": [
@@ -1845,7 +1867,7 @@
                 "description": "A sub-faction rule applied to every unit of the parent (and sub-faction) it selects"
             }
         },
-        "__schema97": {
+        "__schema99": {
             "type": "array",
             "items": {
                 "oneOf": [
@@ -1870,10 +1892,10 @@
                         "type": "object",
                         "properties": {
                             "kind": {
-                                "$ref": "#/definitions/__schema98"
+                                "$ref": "#/definitions/__schema100"
                             },
                             "message": {
-                                "$ref": "#/definitions/__schema99"
+                                "$ref": "#/definitions/__schema101"
                             }
                         },
                         "required": [
@@ -1892,11 +1914,11 @@
                 ]
             }
         },
-        "__schema98": {
+        "__schema100": {
             "type": "string",
             "const": "unavailable"
         },
-        "__schema99": {
+        "__schema101": {
             "type": "string"
         }
     },

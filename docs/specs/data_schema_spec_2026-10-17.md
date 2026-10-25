@@ -203,6 +203,24 @@ A **sub-faction** (`SubFaction`) is a modifier of its parent:
 
 - Stat and special-rule effects may carry a `when` condition (`examples/full/sub-factions/veterans.json`).
 
+### 4.1 Sub-faction groups
+
+A contingent may take **several sub-factions of its faction**: one pick per independent choice the rules offer (a doctrine *and* a heritage). The faction declares those choices as **`subFactionGroups`**, and each sub-faction names its group in **`group`**:
+
+```json
+"subFactionGroups": {
+    "doctrine": { "id": "doctrine", "name": "Doctrine", "max": 1 },
+    "heritage": { "id": "heritage", "name": "Heritage", "max": "1 + (list.has(unit:walker) ? 1 : 0)" }
+}
+```
+
+- A group's **`min`** (default 0) and **`max`** (default 1) are how many of its sub-factions a contingent must / may take. They're numbers or expressions in the `contingent`, `root` and `list` scopes, evaluated for the contingent taking them.
+- **The `default` group.** A sub-faction without `group` is in the group `default`, which has `max: 1` unless declared: one sub-faction per faction, as before groups existed. A faction may declare `default` in `subFactionGroups` to name it or change its limits (`"min": 1` to require a pick); `"group": "default"` means the same as leaving `group` out. Any other `group` must be declared by the parent; an unknown one is an error.
+- A sub-faction's **`when`** (a condition) says when it may be taken: `choice(allegiance) == traitor`, or `list.has(subfaction:…)` for one that needs another pick. Its expression sees `contingent`, `root` and `list` for the contingent it is taken for. The app re-checks it whenever the list changes; a sub-faction whose `when` stops holding is a list issue, not removed.
+- **`subfaction:` references** (`contingent.is(subfaction:x)`, `list.is(subfaction:x)`) are true when `x` is any of the sub-factions taken.
+- **Combining sub-factions.** Sub-factions that can be taken together are merged into the parent in one go: two in different groups, or two in one group whose `max` is an expression or more than 1. Such sub-factions must not define a record (same kind and id) or a unit modifier (same id) **differently**; identical copies are fine and are merged as one. Two of them overriding the same parent record is the same error unless their replacements are identical: there is no "last group wins". Sub-factions that can't be taken together (two in a group of at most one) may reuse ids freely. Each sub-faction is still checked against its parent alone, and collisions with the parent's records stay governed by `overrides`.
+- **Saved lists** (the Force Org app, a separate repository). A contingent holds its picks as a list of sub-faction ids (`subFactions: string[]`, in the order picked) rather than one `subFaction`; the app checks each group's `min` / `max` and each pick's `when`, and merges the picks into the parent in group order (the order of `subFactionGroups`, `default` first). Data using `group` or `subFactionGroups` needs validator 1.1.0 or later and an app version that supports several sub-factions.
+
 ## 5. Units and profiles
 
 ```json
