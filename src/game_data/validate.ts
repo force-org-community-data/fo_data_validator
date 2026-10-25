@@ -6,6 +6,7 @@ import {
     FIELD_SCOPES,
     BuiltInScope,
     BUILT_IN_SCOPES,
+    tagId,
 } from '../expressions/checker';
 import { didYouMean } from '../expressions/diagnostics';
 import { DEFAULT_SUB_FACTION_GROUP } from './schema';
@@ -25,6 +26,7 @@ import type {
     SpecialRuleSelection,
     StatEffect,
     SubFaction,
+    TraitEffect,
     SubFactionGroup,
     Unit,
     UnitSelectorOrRef,
@@ -396,8 +398,8 @@ class Validator {
                         this.known(path, 'group type', t, groupTypes);
                     const scopes: Array<BuiltInScope> =
                         rule.scope === 'list'
-                            ? ['list']
-                            : [rule.scope, 'root', 'list'];
+                            ? ['main', 'list']
+                            : [rule.scope, 'root', 'main', 'list'];
                     this.numberOrExpr(
                         `${path}/min`,
                         rule.min,
@@ -794,6 +796,7 @@ class Validator {
         const profileIds = unit.profiles.map((p) => p.id);
         if (new Set(profileIds).size !== profileIds.length)
             this.report(path, 'profile ids repeat');
+        if (unit.composition) this.composition(unit, profileIds, scope);
         unit.profiles.forEach((profile) => {
             const at = `${path}/profiles/${profile.id}`;
             const template = game.stats.unit[profile.template];
@@ -843,6 +846,86 @@ class Validator {
                 FIELD_SCOPES.unit,
                 scope.vocabulary
             );
+    }
+
+    /*
+     * A unit's composition blocks: profiles in at most one block, whole
+     * numbers, a cost wherever the unit can grow, and a `modelCount` that
+     * matches the blocks at their minimum.
+     */
+    private composition(unit: Unit, profileIds: Array<string>, scope: Scope) {
+        const path = `units/${unit.id}/composition`;
+        const blocks = unit.composition ?? [];
+        const whole = (n: number, least: number) =>
+            Number.isInteger(n) && n >= least;
+        if (unit.additionalModels)
+            this.report(
+                `units/${unit.id}/additionalModels`,
+                "a unit with a composition grows through its blocks' max and cost, not additionalModels"
+            );
+
+        const blockIds = blocks.map((b) => b.id);
+        if (new Set(blockIds).size !== blockIds.length)
+            this.report(path, 'block ids repeat');
+        const blockOf = new Map<string, string>();
+        let baseModels = 0;
+        for (const block of blocks) {
+            const at = `${path}/${block.id}`;
+            const counts = Object.entries(block.profiles);
+            if (!counts.length)
+                this.report(at, 'a block needs at least one profile');
+            for (const [profile, count] of counts) {
+                this.known(at, 'profile', profile, profileIds);
+                if (!whole(count, 1))
+                    this.report(
+                        `${at}/profiles/${profile}`,
+                        `a block holds a whole number of models of each profile, at least 1 (got ${count})`
+                    );
+                const other = blockOf.get(profile);
+                if (other !== undefined && other !== block.id)
+                    this.report(
+                        at,
+                        `profile '${profile}' is also in block '${other}'; a profile may be in only one block`
+                    );
+                blockOf.set(profile, block.id);
+            }
+            const min = block.min ?? 1;
+            const max = block.max ?? min;
+            if (!whole(min, 0))
+                this.report(at, `min must be a whole number (got ${min})`);
+            if (!whole(max, 0))
+                this.report(at, `max must be a whole number (got ${max})`);
+            if (max < min) this.report(at, `min ${min} is more than max ${max}`);
+            if (max > min && !block.cost)
+                this.report(
+                    at,
+                    'a block the unit can add copies of needs a cost per copy'
+                );
+            if (block.cost)
+                this.costs(
+                    `${at}/cost`,
+                    block.cost,
+                    scope,
+                    FIELD_SCOPES.unit,
+                    'additionalModels'
+                );
+            baseModels +=
+                min * counts.reduce((sum, [, count]) => sum + count, 0);
+        }
+        if (baseModels !== unit.modelCount)
+            this.report(
+                `units/${unit.id}/modelCount`,
+                `modelCount is ${unit.modelCount}, but the composition's blocks at their min hold ${baseModels} models`
+            );
+        if (baseModels === 0)
+            this.report(path, 'the unit has no models at its minimum');
+        for (const profile of profileIds)
+            if (!blockOf.has(profile))
+                this.report(
+                    path,
+                    `profile '${profile}' is in no block, so no model uses it`,
+                    'warning'
+                );
     }
 
     /*
@@ -999,7 +1082,7 @@ class Validator {
 
     private effect(
         path: string,
-        effect: StatEffect | SpecialRuleEffect,
+        effect: StatEffect | SpecialRuleEffect | TraitEffect,
         scope: Scope,
         scopes: ReadonlyArray<BuiltInScope>
     ) {
@@ -1008,10 +1091,32 @@ class Validator {
                 if (!scope.unitStats.has(change.stat))
                     this.report(path, `unknown stat '${change.stat}'`);
             }
-        } else {
+        } else if (effect.kind === 'specialRule') {
             this.rule(path, effect.rule, scope);
+        } else {
+            this.traitEffect(path, effect);
+            // traits belong to the whole unit: no profile to look at
+            scopes = scopes.filter((s) => s !== 'profile');
         }
         this.condition(path, effect.when, scopes, scope.vocabulary);
+    }
+
+    private traitEffect(path: string, effect: TraitEffect) {
+        const { add = [], remove = [], replace } = effect;
+        if (!add.length && !remove.length && !replace)
+            this.report(path, 'a trait effect needs add, remove or replace');
+        if (replace && !replace.from.length)
+            this.report(path, 'replace needs at least one trait in from');
+        const removed = [...remove, ...(replace?.from ?? [])].map(tagId);
+        for (const trait of [...add, ...(replace ? [replace.to] : [])]) {
+            if (!trait.trim()) this.report(path, 'a trait needs a name');
+            else if (removed.includes(tagId(trait)))
+                this.report(
+                    path,
+                    `'${trait}' is both given and taken away`,
+                    'warning'
+                );
+        }
     }
 
     private selector(
@@ -1037,6 +1142,15 @@ class Validator {
         selector.roles?.forEach((r) =>
             this.known(path, 'role', r, keys(scope.game.roles))
         );
+        const traits = (scope.vocabulary.traits ?? []).map(tagId);
+        for (const trait of selector.traits ?? []) {
+            if (!traits.includes(tagId(trait)))
+                this.report(
+                    path,
+                    `no unit has or is given the trait '${trait}'${didYouMean(tagId(trait), traits)}`,
+                    'warning'
+                );
+        }
     }
 
     private detachments(
@@ -1108,6 +1222,14 @@ class Validator {
                     FIELD_SCOPES.detachmentLimit,
                     'group'
                 );
+            detachment.effects?.forEach((effect, i) =>
+                this.effect(
+                    `${at}/effects/${i}`,
+                    effect,
+                    scope,
+                    FIELD_SCOPES.effect
+                )
+            );
         }
     }
 

@@ -141,6 +141,8 @@ Change a schema, then run `npm run generate-schema`; a test fails when `schema/`
 
 Data that uses sub-faction groups (`subFactionGroups`, a sub-faction's `group` or `when`) needs validator **1.1.0** or later, and a Force Org app that supports several sub-factions per contingent.
 
+Data that uses composition blocks (`composition`), trait effects, detachment `effects`, selector `traits`, `trait:` references or the `main` scope needs validator **1.2.0** or later, and an app that supports them.
+
 ## Releasing
 
 1. Make sure `npm test`, `npm run type-check`, `npm run lint`, `npm run generate-schema -- --check` and `npm run validate-data` pass (CI runs them).

@@ -140,6 +140,7 @@ Rules, all checked when data loads:
 | `group` | the unit's container: a detachment, formation, retinue or team, whatever the game calls it | |
 | `contingent` | a root group plus the groups linked to it, sharing one faction source | e.g. a core or allied formation with the reserve and elite formations linked to it. Games without linking have one contingent per group, or one for the whole list |
 | `root` | the contingent's root group | a game may call it `core` |
+| `main` | the list's main contingent: the one whose root group's type has `source: main` | the same verbs as `contingent`; for the main contingent's own rules it is their `contingent`. Lets an allied contingent follow the main one, e.g. `main.is(subfaction:veterans)`. Added in validator 1.2.0 |
 | `list` | the whole list | points limit, list choices, totals across all contingents |
 
 ### 8.2 Which scopes each field may use
@@ -148,15 +149,16 @@ A field sees its own subject and everything containing it.
 
 | Expression lives on… | Scopes |
 | --- | --- |
-| Detachment `when` / `max` | `contingent`, `root`, `list` (+ `group` for rules checked after the detachment is added) |
-| Slot `when`, `repeat.max` | `slot`, `group`, `contingent`, `root`, `list` |
-| Unit `when`, `limit.max`, `cost` | `unit`, `slot`, `group`, `contingent`, `root`, `list` |
-| Upgrade `when` / `min` / `max` | `profile` (with `profileId`), `unit`, `slot`, `group`, `contingent`, `root`, `list` |
+| Detachment `when` / `max` | `contingent`, `root`, `main`, `list` (+ `group` for rules checked after the detachment is added) |
+| Slot `when`, `repeat.max` | `slot`, `group`, `contingent`, `root`, `main`, `list` |
+| Unit `when`, `limit.max`, `cost` | `unit`, `slot`, `group`, `contingent`, `root`, `main`, `list` |
+| Upgrade `when` / `min` / `max` | `profile` (with `profileId`), `unit`, `slot`, `group`, `contingent`, `root`, `main`, `list` |
 | Option `when` / `max` / `cost` | `option`, plus everything an upgrade sees |
-| Stat / special-rule effect `when` | `profile`, `unit`, `slot`, `group`, `contingent`, `root`, `list` |
-| Special rule `grants` | `rule`, `unit`, `slot`, `group`, `contingent`, `root`, `list` |
-| Sub-faction `when`, sub-faction group `min` / `max` | `contingent`, `root`, `list`: the contingent the sub-faction is taken for |
-| Group type `min` / `max`, list rules | `list` (a `count` list rule with `scope: contingent` or `group` also sees that scope, `root` and `list`) |
+| Stat / special-rule effect `when` | `profile`, `unit`, `slot`, `group`, `contingent`, `root`, `main`, `list` |
+| Trait effect `when` | as a stat effect's, without `profile` |
+| Special rule `grants` | `rule`, `unit`, `slot`, `group`, `contingent`, `root`, `main`, `list` |
+| Sub-faction `when`, sub-faction group `min` / `max` | `contingent`, `root`, `main`, `list`: the contingent the sub-faction is taken for |
+| Group type `min` / `max`, list rules | `main`, `list` (a `count` list rule with `scope: contingent` or `group` also sees that scope, `root`, `main` and `list`) |
 
 Using another scope is a load error: "'unit' isn't available here (allowed: contingent, group, list, root)".
 
@@ -174,6 +176,7 @@ A game's `terms` map gives built-in scopes a `word` (`"group": { "word": "format
 | `role:` | a role | game `roles` |
 | `type:` | a unit type, or a group type (§9.2) | game `unitTypes` / `groupTypes` |
 | `tag:` | a unit or profile tag, or a slot tag (§9.2) | unit and profile `tags` / game `slotTags` |
+| `trait:` | a unit trait (validator 1.2.0) | unit `traits` and trait effects, in any faction of the game |
 | `weapon:` | a weapon record | faction |
 | `equipment:` | an equipment record | faction |
 | `group:` (or the game's word) | a group type or a specific detachment record | game `groupTypes`, game and faction `detachments` |
@@ -190,6 +193,8 @@ The same kind can mean different things on different scopes; the checker knows e
 - `tag:` on `slot` means the game's slot tags; on `unit` and `profile` the unit's and profile's tags;
 - `type:` on `unit`/`profile` means unit type; on `group`/`root` group type.
 
+Traits are free text too and match the same way (`trait:gun-line` for `Gun Line`). A unit's traits include those effects give it (data schema spec §5.2), so the known traits are every unit's `traits` plus every trait effect's `add` and `replace.to`, across all the game's factions (`main` and `list` see other factions' units). An unknown `trait:` is a warning. On a profile, `is(trait:…)` tests its unit's traits.
+
 Unknown ids get "did you mean". Tags are free text in unit data (`Sergeant`, `Heavy Assault`), so a `tag:` reference matches them case-insensitively and writes them in id form, lowercase with hyphens (`tag:sergeant`, `tag:heavy-assault`), the same way profile filters match. An unknown `tag:` on a unit is a lint warning (no unit in the faction has it), not an error.
 
 ### 9.3 Named selectors
@@ -202,19 +207,19 @@ Unknown ids get "did you mean". Tags are free text in unit data (`Sergeant`, `He
 
 | Verb | On | Arguments | Returns | Meaning |
 | --- | --- | --- | --- | --- |
-| `count(ref)` | `group`, `contingent`, `root`, `list` | unit ref (`unit:`/`role:`/`type:`/`tag:`/`@`) | number | units in scope that match. Not on `unit`: test the unit itself with `unit.is(…)` |
-| | `profile`, `unit`, `group`, `contingent`, `root`, `list` | wargear ref (`weapon:`/`equipment:`) | number | amount held in scope, counted as the restriction engine does: default wargear (per model where set), plus picks, minus swaps |
-| | `contingent`, `list` | group ref | number | groups in scope of that type or detachment |
+| `count(ref)` | `group`, `contingent`, `root`, `main`, `list` | unit ref (`unit:`/`role:`/`type:`/`tag:`/`trait:`/`@`) | number | units in scope that match. Not on `unit`: test the unit itself with `unit.is(…)` |
+| | `profile`, `unit`, `group`, `contingent`, `root`, `main`, `list` | wargear ref (`weapon:`/`equipment:`) | number | amount held in scope, counted as the restriction engine does: default wargear (per model where set), plus picks, minus swaps |
+| | `contingent`, `main`, `list` | group ref | number | groups in scope of that type or detachment |
 | `has(ref)` | as `count` | as `count` | bool | `count(ref) > 0` |
 | `is(ref)` | `unit` | unit ref | bool | the unit matches |
-| | `profile` | `type:`, `tag:` | bool | the profile (with its unit's type and tags) matches |
+| | `profile` | `type:`, `tag:`, `trait:` | bool | the profile (with its unit's type, tags and traits) matches |
 | | `slot` | `tag:`, `role:` | bool | the slot has that tag / accepts that role |
 | | `group`, `root` | `type:`, group ref | bool | the group is of that type or detachment |
-| | `contingent`, `list` | `faction:`, `subfaction:` | bool | the contingent's faction source (or the list's main one); `subfaction:` is true when it is any of the sub-factions taken |
-| `sum(resource[, ref])` | `unit`, `group`, `contingent`, `root`, `list` | resource name, optional unit ref | number | resource spent in scope, optionally only on matching units |
+| | `contingent`, `main`, `list` | `faction:`, `subfaction:` | bool | the contingent's faction source (or the list's main one); `subfaction:` is true when it is any of the sub-factions taken |
+| `sum(resource[, ref])` | `unit`, `group`, `contingent`, `root`, `main`, `list` | resource name, optional unit ref | number | resource spent in scope, optionally only on matching units |
 | `limit(resource)` | `list` | list resource | number | the player's limit (e.g. points limit) |
 | | `unit` | unit resource | number | the unit's capacity (e.g. equipment slots, from the resource's `capacityStat`) |
-| `models()` | `unit` | none | number | models in the unit, including additional models |
+| `models()` | `unit` | none | number | models in the unit, including additional models (with composition blocks: every copy of every block) |
 | `picks()` | `option` | none | number | times the option has been taken |
 | `value()` | `rule` | none | number | the rule's value on the unit, or its `defaultValue`; an error (the grant counts as 0) when it has neither or it isn't a number |
 | `choice(name)` | `option` | sub-choice id | `enum` | the option's sub-choice value (e.g. `option.choice(facing) == turret`) |

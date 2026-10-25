@@ -34,6 +34,7 @@ const vocabulary: ExpressionVocabulary = {
     selectors: ['line-troops'],
     slotTags: ['prime'],
     tags: ['Sergeant'],
+    traits: ['Field Army'],
     resources: { points: 'list', slots: 'unit' },
     choices: { stance: ['offensive', 'defensive'] },
     subChoices: { mount: ['front', 'turret'] },
@@ -48,6 +49,7 @@ type FakeUnit = {
     role: string;
     type: string;
     tags?: Array<string>;
+    traits?: Array<string>;
     points: number;
     models: number;
     wargear?: Record<string, number>;
@@ -58,6 +60,7 @@ const squad = (points = 100): FakeUnit => ({
     role: 'troop',
     type: 'infantry',
     tags: ['Sergeant'],
+    traits: ['Field Army'],
     points,
     models: 10,
     wargear: { rifle: 9, axe: 1 },
@@ -87,6 +90,8 @@ const matches = (unit: FakeUnit, ref: ResolvedReference) => {
             return unit.type === ref.id;
         case 'unitTag':
             return !!unit.tags?.map(tagId).includes(ref.id);
+        case 'trait':
+            return !!unit.traits?.map(tagId).includes(ref.id);
         case 'selector':
             return (
                 ref.id === 'line-troops' &&
@@ -147,6 +152,10 @@ function context(
             ...container(units),
             is: (ref) => ref.kind === 'subfaction' && ref.id === 'veterans',
         },
+        main: {
+            ...container(units.slice(0, 1)),
+            is: (ref) => ref.kind === 'subfaction' && ref.id === 'veterans',
+        },
         list: {
             ...container(units, ['core', 'standard-core']),
             limit: () => options.limit ?? 3000,
@@ -176,6 +185,7 @@ const ALL: ExpressionField['scopes'] = [
     'group',
     'contingent',
     'root',
+    'main',
     'list',
 ];
 
@@ -312,6 +322,24 @@ describe('evaluator: spec examples', () => {
             true
         );
         assert.equal(run('list.count(group:core)', ctx), 1);
+    });
+
+    it('reads the main contingent and traits', () => {
+        const list = [squad(), carrier, general];
+        assert.equal(run('main.count(role:troop)', context(list)), 1);
+        assert.equal(
+            run(
+                'not main.is(faction:field-army) or main.is(subfaction:veterans)',
+                context(list),
+                'boolean'
+            ),
+            true
+        );
+        assert.equal(run('list.count(trait:field-army)', context(list)), 1);
+        assert.equal(
+            run('unit.is(trait:field-army)', context([carrier]), 'boolean'),
+            false
+        );
     });
 
     it('evaluates option picks and sub-choices', () => {

@@ -83,12 +83,18 @@ export const UnitSelectorSchema = z
     .strictObject({
         unitIds: z.array(SlugSchema).optional(),
         roles: z.array(SlugSchema).optional(),
+        traits: z
+            .array(z.string())
+            .optional()
+            .describe(
+                'a unit matches when it has any of these traits, matched as case-insensitive text'
+            ),
         profiles: ProfileFilterSchema.optional().describe(
             'a unit matches when one of its profiles does (or the unit itself, if it has no profiles)'
         ),
     })
     .describe(
-        'Picks units by id, role and profile type/tags; left out, a field matches every unit'
+        'Picks units by id, role, trait and profile type/tags; left out, a field matches every unit'
     );
 
 export const SelectorRefSchema = z
@@ -152,6 +158,32 @@ export const SpecialRuleEffectSchema = z.strictObject({
     when: ConditionSchema.optional(),
 });
 
+export const TraitEffectSchema = z
+    .strictObject({
+        kind: z.literal('trait'),
+        add: z
+            .array(z.string())
+            .optional()
+            .describe('traits the unit gains'),
+        remove: z
+            .array(z.string())
+            .optional()
+            .describe('traits the unit loses, if it has them'),
+        replace: z
+            .strictObject({
+                from: z.array(z.string()),
+                to: z.string(),
+            })
+            .optional()
+            .describe(
+                'the unit loses any of `from` and, only if it had one, gains `to`'
+            ),
+        when: ConditionSchema.optional(),
+    })
+    .describe(
+        "changes the unit's traits (traits belong to the whole unit, so there is no profile filter); traits match as case-insensitive text"
+    );
+
 /* ------------------------------------------------------------------ */
 /* Game definition                                                     */
 /* ------------------------------------------------------------------ */
@@ -164,6 +196,7 @@ export const BUILT_IN_SCOPES = [
     'group',
     'contingent',
     'root',
+    'main',
     'list',
 ] as const;
 
@@ -473,6 +506,7 @@ export const OptionSchema = z.strictObject({
             z.discriminatedUnion('kind', [
                 StatEffectSchema,
                 SpecialRuleEffectSchema,
+                TraitEffectSchema,
             ])
         )
         .optional()
@@ -563,7 +597,7 @@ export const DefaultWargearSchema = z
             "with `perModel`: profiles that don't carry it"
         ),
         profileId: SlugSchema.optional().describe(
-            'the profile that carries it; left out, the unit at large does'
+            'the profile that carries it; left out, the unit at large does. With `perModel`: one for each model of that profile'
         ),
     })
     .describe('Wargear a unit carries without taking any upgrade');
@@ -589,6 +623,39 @@ export const UnitProfileSchema = z.strictObject({
         .describe("added to the unit's tags for this profile (e.g. Sergeant)"),
 });
 
+export const CompositionBlockSchema = z
+    .strictObject({
+        name: z
+            .string()
+            .optional()
+            .describe(
+                'shown to players, e.g. "Gun Crew"; left out, built from the profile names'
+            ),
+        description: z.string().optional(),
+        id: SlugSchema.describe(
+            'unique within the unit; the key a saved list stores the number of copies under'
+        ),
+        profiles: z
+            .record(SlugSchema, z.number())
+            .describe(
+                'profile id → how many models of it one copy of the block holds, e.g. `{ "gunner": 1, "loader": 1 }`'
+            ),
+        min: z
+            .number()
+            .optional()
+            .describe('copies in the unit as bought for its `cost`; left out = 1'),
+        max: z
+            .number()
+            .optional()
+            .describe('most copies the unit may hold; left out = `min`'),
+        cost: CostsSchema.optional().describe(
+            'what each copy above `min` costs; needed when `max` is more than `min`'
+        ),
+    })
+    .describe(
+        'A set of models bought together: the unit holds between `min` and `max` copies of it, e.g. a Gun Crew of one Gunner and one Loader'
+    );
+
 export const UnitSchema = z.strictObject({
     ...named,
     id: SlugSchema,
@@ -601,14 +668,32 @@ export const UnitSchema = z.strictObject({
             'keywords and sub-types, matched by `tag:` references and profile filters'
         ),
     cost: CostsSchema,
-    modelCount: z.number(),
+    modelCount: z
+        .number()
+        .describe(
+            'models in the unit as bought for its `cost`; with `composition`, the sum over its blocks of `min` × models per copy'
+        ),
     additionalModels: z
         .strictObject({ max: z.number(), cost: CostsSchema })
-        .optional(),
+        .optional()
+        .describe(
+            'up to `max` more models at `cost` each, of no particular profile; not used with `composition`'
+        ),
+    composition: z
+        .array(CompositionBlockSchema)
+        .optional()
+        .describe(
+            'how many models of each profile the unit holds and how it grows, as blocks of models bought together; replaces `additionalModels`'
+        ),
     profiles: z.array(UnitProfileSchema),
     upgrades: z.record(SlugSchema, UpgradeSchema).optional(),
     defaultWargear: z.array(DefaultWargearSchema).optional(),
-    traits: z.array(z.string()).optional(),
+    traits: z
+        .array(z.string())
+        .optional()
+        .describe(
+            'the unit\'s traits (e.g. a faction trait), matched by `trait:` references and selector `traits` as case-insensitive text; effects may add or remove some'
+        ),
     when: ConditionSchema.optional().describe('when the unit may be taken'),
     limit: z
         .strictObject({
@@ -691,6 +776,16 @@ export const DetachmentRequirementSchema = z
         'units the list must already hold before the detachment can be taken'
     );
 
+export const DetachmentEffectSchema = z
+    .discriminatedUnion('kind', [
+        StatEffectSchema,
+        SpecialRuleEffectSchema,
+        TraitEffectSchema,
+    ])
+    .describe(
+        'applied to every unit in the detachment, including units in slots added later'
+    );
+
 export const DetachmentSchema = z.strictObject({
     ...named,
     id: SlugSchema,
@@ -715,6 +810,12 @@ export const DetachmentSchema = z.strictObject({
         'how many of this detachment a list may hold'
     ),
     cost: CostsSchema.optional().describe("replaces its group type's `cost`"),
+    effects: z
+        .array(DetachmentEffectSchema)
+        .optional()
+        .describe(
+            'applied to every unit in the detachment, e.g. "Every unit in this detachment gains the Gun Line trait"'
+        ),
 });
 
 /* Slot options (choices a tagged slot offers) */
@@ -738,6 +839,7 @@ export const AllowedRolesEffectSchema = z
 export const SlotOptionEffectSchema = z.discriminatedUnion('kind', [
     StatEffectSchema,
     SpecialRuleEffectSchema,
+    TraitEffectSchema,
     SlotEffectSchema,
     AllowedRolesEffectSchema,
 ]);
@@ -861,10 +963,10 @@ export const SubFactionGroupSchema = z
         ...named,
         id: SlugSchema,
         min: NumberOrExprSchema.optional().describe(
-            'how many sub-factions of this group a contingent must take; left out = 0. Expressions may use `contingent`, `root` and `list`'
+            'how many sub-factions of this group a contingent must take; left out = 0. Expressions may use `contingent`, `root`, `main` and `list`'
         ),
         max: NumberOrExprSchema.optional().describe(
-            'how many sub-factions of this group a contingent may take; left out = 1. Expressions may use `contingent`, `root` and `list`, e.g. `1 + (list.has(unit:x) ? 1 : 0)`'
+            'how many sub-factions of this group a contingent may take; left out = 1. Expressions may use `contingent`, `root`, `main` and `list`, e.g. `1 + (list.has(unit:x) ? 1 : 0)`'
         ),
     })
     .describe(
@@ -898,6 +1000,7 @@ export const UnitModifierActionSchema = z.discriminatedUnion('kind', [
         ),
     StatEffectSchema,
     SpecialRuleEffectSchema,
+    TraitEffectSchema,
 ]);
 
 export const UnitModifierSchema = z
@@ -926,7 +1029,7 @@ export const SubFactionSchema = z
             "one of the parent's `subFactionGroups`; left out, the `default` group. Sub-factions that can be taken together (different groups, or one group whose `max` may exceed 1) must not define the same record differently"
         ),
         when: ConditionSchema.optional().describe(
-            'when the sub-faction may be taken, checked for the contingent it is taken for. Expressions may use `contingent`, `root` and `list`, e.g. `choice(allegiance) == traitor`'
+            'when the sub-faction may be taken, checked for the contingent it is taken for. Expressions may use `contingent`, `root`, `main` and `list`, e.g. `choice(allegiance) == traitor` or `main.is(subfaction:x)`'
         ),
         overrides: z
             .array(

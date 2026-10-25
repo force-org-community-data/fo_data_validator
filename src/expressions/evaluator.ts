@@ -14,7 +14,8 @@ import type { Argument, Expr } from './parser';
 
 /**
  * One scope of the list (the unit, its group, the whole list, …). `unitTag`
- * references hold `tagId` forms, so compare tags with `tagId(tag)`.
+ * and `trait` references hold `tagId` forms, so compare tags and traits with
+ * `tagId(…)`.
  */
 export type ScopeView = {
     count?(ref: ResolvedReference): number;

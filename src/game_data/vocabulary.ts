@@ -3,7 +3,13 @@ import type {
     BuiltInScope,
 } from '../expressions/checker';
 import { BUILT_IN_SCOPES } from '../expressions/checker';
-import type { Faction, FactionRecords, GameSystem, SubFaction } from '../types';
+import type {
+    Faction,
+    FactionRecords,
+    GameSystem,
+    SubFaction,
+    TraitEffect,
+} from '../types';
 
 const keys = (record?: object) => Object.keys(record ?? {});
 
@@ -34,17 +40,56 @@ function tagsOf(records: Array<Partial<FactionRecords>>) {
     return [...tags];
 }
 
+/* Records that may name traits: units, and every effect that can give one */
+type TraitSource = Partial<
+    Pick<FactionRecords, 'units' | 'upgrades' | 'detachments' | 'slotOptions'>
+> &
+    Partial<Pick<SubFaction, 'unitModifiers'>>;
+
+/* Traits units have or trait effects give, anywhere in the sources */
+function traitsOf(sources: Array<TraitSource>) {
+    const traits = new Set<string>();
+    const fromEffect = (effect: { kind: string }) => {
+        if (effect.kind !== 'trait') return;
+        const { add, replace } = effect as TraitEffect;
+        add?.forEach((t) => traits.add(t));
+        if (replace) traits.add(replace.to);
+    };
+    const fromOptions = (options: Record<string, object>) => {
+        for (const option of Object.values(options))
+            if ('effects' in option)
+                (option.effects as Array<{ kind: string }>).forEach(fromEffect);
+    };
+    for (const s of sources) {
+        for (const unit of Object.values(s.units ?? {})) {
+            unit.traits?.forEach((t) => traits.add(t));
+            for (const upgrade of Object.values(unit.upgrades ?? {}))
+                fromOptions(upgrade.options);
+        }
+        for (const upgrade of Object.values(s.upgrades ?? {}))
+            fromOptions(upgrade.options);
+        for (const d of Object.values(s.detachments ?? {}))
+            d.effects?.forEach(fromEffect);
+        for (const o of Object.values(s.slotOptions ?? {}))
+            o.effects?.forEach(fromEffect);
+        for (const m of Object.values(s.unitModifiers ?? {}))
+            m.actions.forEach(fromEffect);
+    }
+    return [...traits];
+}
+
 /**
  * What expressions in a faction (optionally with one of its sub-factions
  * merged in) may refer to: its own records, then the game's. `factions` and
  * `subFactions` are every one available, for `faction:` / `subfaction:`
- * references.
+ * references; the traits they name (when given whole) are known to `trait:`
+ * references everywhere, since `main` and `list` see other factions' units.
  */
 export function buildVocabulary(
     game: GameSystem,
     records: Array<Partial<FactionRecords>>,
-    factions: Array<Pick<Faction, 'id'>>,
-    subFactions: Array<Pick<SubFaction, 'id'>>
+    factions: Array<Pick<Faction, 'id'> & TraitSource>,
+    subFactions: Array<Pick<SubFaction, 'id'> & TraitSource>
 ): ExpressionVocabulary {
     const all = (key: keyof FactionRecords) =>
         records.flatMap((r) => keys(r[key]));
@@ -64,6 +109,7 @@ export function buildVocabulary(
         selectors: [...keys(game.selectors), ...all('selectors')],
         slotTags: keys(game.slotTags),
         tags: tagsOf(records),
+        traits: traitsOf([game, ...records, ...factions, ...subFactions]),
         resources: Object.fromEntries(
             Object.values(game.resources).map((r) => [r.id, r.scope])
         ),

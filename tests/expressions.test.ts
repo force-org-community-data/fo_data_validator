@@ -30,6 +30,7 @@ const vocabulary: ExpressionVocabulary = {
     selectors: ['line-troops'],
     slotTags: ['prime'],
     tags: ['Sergeant'],
+    traits: ['Field Army', 'Veteran Corps'],
     resources: { points: 'list', slots: 'unit' },
     choices: { stance: ['offensive', 'defensive'] },
     subChoices: { mount: ['front', 'rear', 'turret'] },
@@ -248,6 +249,27 @@ describe('checker: spec examples', () => {
         ok('choice(stance) != offensive', unitWhen);
     });
 
+    it("reads the list's main contingent", () => {
+        const subFaction = field(FIELD_SCOPES.subFaction, 'boolean');
+        ok(
+            'not main.is(faction:field-army) or main.is(subfaction:veterans)',
+            subFaction
+        );
+        ok('main.count(role:troop) >= 2 and main.has(group:core)', unitWhen);
+        ok('main.sum(points) > 500', field(FIELD_SCOPES.list, 'boolean'));
+    });
+
+    it('matches traits on units and profiles', () => {
+        ok('unit.is(trait:field-army)', unitWhen);
+        ok(
+            'profile.is(trait:veteran-corps)',
+            field(FIELD_SCOPES.effect, 'boolean')
+        );
+        ok('group.count(trait:veteran-corps) >= 1', unitWhen);
+        ok('main.count(trait:field-army) == main.count(role:troop)', unitWhen);
+        ok('list.sum(points, trait:field-army) > 100', unitWhen);
+    });
+
     it('returns the type', () => {
         assert.deepEqual(check('unit.models() + 1', unitMax).type, {
             kind: 'number',
@@ -272,7 +294,7 @@ describe('checker: errors', () => {
                 'unit.has(weapon:rifle)',
                 field(FIELD_SCOPES.detachmentWhen, 'boolean')
             ),
-            ["'unit' isn't available here (allowed: contingent, list, root)"]
+            ["'unit' isn't available here (allowed: contingent, list, main, root)"]
         );
     });
 
@@ -340,6 +362,24 @@ describe('checker: errors', () => {
         // tags match case-insensitively: `tag:sergeant` finds the `Sergeant` tag
         assert.deepEqual(check('unit.is(tag:sergeant)').diagnostics, []);
         assert.match(errors('unit.is(tag:Sergeant)')[0], /names are lowercase/);
+    });
+
+    it('warns (not errors) on unknown traits, and keeps unit.count to wargear', () => {
+        assert.deepEqual(errors('unit.is(trait:heavy-guns)'), []);
+        assert.deepEqual(warnings('unit.is(trait:veteran-corp)'), [
+            "no unit has or is given the trait 'veteran-corp' (did you mean 'veteran-corps'?)",
+        ]);
+        assert.match(
+            errors('unit.count(trait:field-army) > 0')[0],
+            /use unit.is/
+        );
+        assert.deepEqual(errors('main.limit(points) > 0'), [
+            "main.limit() isn't available (on main: count, has, is, sum)",
+        ]);
+        assert.match(
+            errors('main.is(type:core)')[0],
+            /main.is\(\) doesn't take 'type:'/
+        );
     });
 
     it('checks types', () => {
