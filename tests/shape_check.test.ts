@@ -59,4 +59,22 @@ describe('checkShapes', () => {
             "units/carrier: missing required property 'modelCount'",
         ]);
     });
+
+    it('checks sub-faction groups', async () => {
+        const all = await files();
+        const faction = all.find((f) => f.kind === 'Faction')!;
+        const groups = (
+            faction.data as { subFactionGroups: Record<string, object> }
+        ).subFactionGroups;
+        groups['doctrine'] = { ...groups['doctrine'], maxx: 2 };
+        const sub = all.find(
+            (f) => (f.data as { id: string }).id === 'coastal-heritage'
+        )!;
+        (sub.data as Record<string, unknown>).group = 3;
+        const issues = checkShapes(all).map((i) => `${i.path}: ${i.message}`);
+        assert.ok(
+            issues.some((i) => i.startsWith('subFactionGroups/doctrine/maxx: '))
+        );
+        assert.ok(issues.some((i) => i.startsWith('group: ')));
+    });
 });

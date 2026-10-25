@@ -6,6 +6,21 @@
     "description": "Uses every faction-level record kind.",
     "game": { "id": "full-game", "versions": ">=1.0.0 <2.0.0" },
     "defaultDetachment": "standard-core",
+    "subFactionGroups": {
+        "doctrine": {
+            "id": "doctrine",
+            "name": "Doctrine",
+            "description": "Pick at most one.",
+            "max": 1
+        },
+        "heritage": {
+            "id": "heritage",
+            "name": "Heritage",
+            "description": "Pick one; a second if the list includes a Walker.",
+            "min": 0,
+            "max": "1 + (list.has(unit:walker) ? 1 : 0)"
+        }
+    },
     "units": {
         "squad": {
             "id": "squad",

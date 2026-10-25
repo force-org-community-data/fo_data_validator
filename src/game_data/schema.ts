@@ -853,6 +853,24 @@ const factionRecords = {
 
 export const FactionRecordsSchema = z.strictObject(factionRecords);
 
+/** The group a sub-faction without a `group` is in; a faction may declare it to name it or change its limits */
+export const DEFAULT_SUB_FACTION_GROUP = 'default';
+
+export const SubFactionGroupSchema = z
+    .strictObject({
+        ...named,
+        id: SlugSchema,
+        min: NumberOrExprSchema.optional().describe(
+            'how many sub-factions of this group a contingent must take; left out = 0. Expressions may use `contingent`, `root` and `list`'
+        ),
+        max: NumberOrExprSchema.optional().describe(
+            'how many sub-factions of this group a contingent may take; left out = 1. Expressions may use `contingent`, `root` and `list`, e.g. `1 + (list.has(unit:x) ? 1 : 0)`'
+        ),
+    })
+    .describe(
+        'An independent sub-faction pick, e.g. a doctrine and a heritage: a contingent takes between `min` and `max` of the sub-factions in each group'
+    );
+
 export const FactionSchema = z.strictObject({
     $schema: schemaUrl,
     ...factionRecords,
@@ -863,6 +881,12 @@ export const FactionSchema = z.strictObject({
     defaultDetachment: SlugSchema.optional().describe(
         "the detachment a new list's main root group starts as when the faction is picked (its usual core formation); the faction's or the game's, of a root group type taken from the main faction"
     ),
+    subFactionGroups: z
+        .record(SlugSchema, SubFactionGroupSchema)
+        .optional()
+        .describe(
+            "the independent sub-faction picks a contingent of this faction makes; sub-factions name theirs in `group`. Sub-factions without a `group` are in the `default` group (max 1), which may be declared here to name it or change its limits"
+        ),
 });
 
 export const UnitModifierActionSchema = z.discriminatedUnion('kind', [
@@ -898,6 +922,12 @@ export const SubFactionSchema = z
             faction: SlugSchema,
             versions: VersionRangeSchema.optional(),
         }),
+        group: SlugSchema.optional().describe(
+            "one of the parent's `subFactionGroups`; left out, the `default` group. Sub-factions that can be taken together (different groups, or one group whose `max` may exceed 1) must not define the same record differently"
+        ),
+        when: ConditionSchema.optional().describe(
+            'when the sub-faction may be taken, checked for the contingent it is taken for. Expressions may use `contingent`, `root` and `list`, e.g. `choice(allegiance) == traitor`'
+        ),
         overrides: z
             .array(
                 z.strictObject({

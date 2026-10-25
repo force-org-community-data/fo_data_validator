@@ -9,7 +9,13 @@
         {
             "game": "game.json",
             "factions": ["factions/field-army.json"],
-            "subFactions": ["sub-factions/veterans.json"]
+            "subFactions": [
+                "sub-factions/veterans.json",
+                "sub-factions/assault-doctrine.json",
+                "sub-factions/siege-doctrine.json",
+                "sub-factions/highland-heritage.json",
+                "sub-factions/coastal-heritage.json"
+            ]
         }
     ],
     "examples": ["lists/sample-list.json"]

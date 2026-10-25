@@ -1,0 +1,21 @@
+{
+    "$schema": "../../../schema/sub-faction.schema.json",
+    "id": "highland-heritage",
+    "version": "1.0.0",
+    "name": "Highland Heritage",
+    "parent": { "faction": "field-army", "versions": ">=1.0.0 <2.0.0" },
+    "group": "heritage",
+    "description": "Heritages can be combined, so their shared `local-knowledge` rule must be identical.",
+    "specialRules": {
+        "local-knowledge": {
+            "id": "local-knowledge",
+            "name": "Local knowledge",
+            "text": "Deploys after the enemy."
+        },
+        "mountaineers": {
+            "id": "mountaineers",
+            "name": "Mountaineers",
+            "text": "Ignore difficult terrain on hills."
+        }
+    }
+}

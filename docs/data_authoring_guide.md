@@ -240,6 +240,34 @@ A modifier of a faction (an order, a regiment, a sponsor):
 - It may hold the same record kinds as a faction (`units`, `weapons`, `upgrades`, `specialRules`, `detachments`, …); they merge over the parent's. A record that shares a kind and id with the parent's **replaces** it only if listed in `overrides`; any other collision is an error.
 - `unitModifiers` pick units with a selector and add a copy of a faction upgrade (`addUpgrade`, stable id from the modifier), apply stat/special-rule effects, or make the units `unavailable`.
 
+### Several picks per faction (sub-faction groups)
+
+When the rules let an army make more than one independent pick (a Cohort Doctrine **and** a Designation, or one Provenance plus another under a condition), declare each pick as a group on the **faction** and put each sub-faction in one:
+
+```json
+// factions/field-army.json
+"subFactionGroups": {
+    "doctrine": { "id": "doctrine", "name": "Doctrine", "max": 1 },
+    "heritage": {
+        "id": "heritage",
+        "name": "Heritage",
+        "max": "1 + (list.has(unit:walker) ? 1 : 0)"
+    }
+}
+
+// sub-factions/coastal-heritage.json
+"group": "heritage",
+"when": { "if": "choice(stance) == defensive", "message": "Coastal heritage is only for defensive lists" }
+```
+
+- `min` defaults to 0 and `max` to 1. Both may be expressions over `contingent`, `root` and `list`.
+- Leave `group` out and the sub-faction is in the `default` group (at most one): a faction with a single pick (one Legion) needs no groups at all. Declare `default` in `subFactionGroups` if you want to name it or set `"min": 1`.
+- `when` restricts a sub-faction: Traitor-only (`choice(allegiance) == traitor`), or needing another pick (`list.is(subfaction:…)`). Same scopes as the group limits.
+- Sub-factions that can be taken together (different groups, or a group allowing more than one) must not define the same record or unit modifier id **differently**. Share a rule by copying it identically, or rename one. Two of them overriding the same parent record differently is an error too. Sub-factions in a group of at most one can't meet, so they may reuse ids.
+- Needs validator 1.1.0+ and an app that supports several sub-factions per contingent.
+
+Examples: `examples/full/sub-factions/*-doctrine.json` and `*-heritage.json`.
+
 ## 7. Expressions
 
 Where no typed rule fits, a string expression computes a number or a condition. They read the list, never change it, always finish, and are checked when the data loads (`fo-validate` reports them).

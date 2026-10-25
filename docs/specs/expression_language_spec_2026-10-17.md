@@ -155,6 +155,7 @@ A field sees its own subject and everything containing it.
 | Option `when` / `max` / `cost` | `option`, plus everything an upgrade sees |
 | Stat / special-rule effect `when` | `profile`, `unit`, `slot`, `group`, `contingent`, `root`, `list` |
 | Special rule `grants` | `rule`, `unit`, `slot`, `group`, `contingent`, `root`, `list` |
+| Sub-faction `when`, sub-faction group `min` / `max` | `contingent`, `root`, `list`: the contingent the sub-faction is taken for |
 | Group type `min` / `max`, list rules | `list` (a `count` list rule with `scope: contingent` or `group` also sees that scope, `root` and `list`) |
 
 Using another scope is a load error: "'unit' isn't available here (allowed: contingent, group, list, root)".
@@ -209,7 +210,7 @@ Unknown ids get "did you mean". Tags are free text in unit data (`Sergeant`, `He
 | | `profile` | `type:`, `tag:` | bool | the profile (with its unit's type and tags) matches |
 | | `slot` | `tag:`, `role:` | bool | the slot has that tag / accepts that role |
 | | `group`, `root` | `type:`, group ref | bool | the group is of that type or detachment |
-| | `contingent`, `list` | `faction:`, `subfaction:` | bool | the contingent's faction source (or the list's main one) |
+| | `contingent`, `list` | `faction:`, `subfaction:` | bool | the contingent's faction source (or the list's main one); `subfaction:` is true when it is any of the sub-factions taken |
 | `sum(resource[, ref])` | `unit`, `group`, `contingent`, `root`, `list` | resource name, optional unit ref | number | resource spent in scope, optionally only on matching units |
 | `limit(resource)` | `list` | list resource | number | the player's limit (e.g. points limit) |
 | | `unit` | unit resource | number | the unit's capacity (e.g. equipment slots, from the resource's `capacityStat`) |
