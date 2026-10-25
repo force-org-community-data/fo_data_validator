@@ -49,6 +49,7 @@ export type ExpressionListRule = Infer<typeof S.ExpressionListRuleSchema>;
 export type Faction = Infer<typeof S.FactionSchema>;
 export type FactionRecords = Infer<typeof S.FactionRecordsSchema>;
 export type SubFaction = Infer<typeof S.SubFactionSchema>;
+export type SubFactionGroup = Infer<typeof S.SubFactionGroupSchema>;
 export type UnitModifier = Infer<typeof S.UnitModifierSchema>;
 export type UnitModifierAction = Infer<typeof S.UnitModifierActionSchema>;
 

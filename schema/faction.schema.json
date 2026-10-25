@@ -773,6 +773,14 @@
                     "$ref": "#/definitions/__schema1"
                 }
             ]
+        },
+        "subFactionGroups": {
+            "description": "the independent sub-faction picks a contingent of this faction makes; sub-factions name theirs in `group`. Sub-factions without a `group` are in the `default` group (max 1), which may be declared here to name it or change its limits",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema82"
+                }
+            ]
         }
     },
     "required": [
@@ -1744,6 +1752,54 @@
             "additionalProperties": {
                 "type": "number"
             }
+        },
+        "__schema82": {
+            "type": "object",
+            "propertyNames": {
+                "$ref": "#/definitions/__schema1"
+            },
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "$ref": "#/definitions/__schema2"
+                    },
+                    "description": {
+                        "$ref": "#/definitions/__schema3"
+                    },
+                    "id": {
+                        "$ref": "#/definitions/__schema1"
+                    },
+                    "min": {
+                        "$ref": "#/definitions/__schema83"
+                    },
+                    "max": {
+                        "$ref": "#/definitions/__schema84"
+                    }
+                },
+                "required": [
+                    "name",
+                    "id"
+                ],
+                "additionalProperties": false,
+                "description": "An independent sub-faction pick, e.g. a doctrine and a heritage: a contingent takes between `min` and `max` of the sub-factions in each group"
+            }
+        },
+        "__schema83": {
+            "description": "how many sub-factions of this group a contingent must take; left out = 0. Expressions may use `contingent`, `root` and `list`",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema6"
+                }
+            ]
+        },
+        "__schema84": {
+            "description": "how many sub-factions of this group a contingent may take; left out = 1. Expressions may use `contingent`, `root` and `list`, e.g. `1 + (list.has(unit:x) ? 1 : 0)`",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema6"
+                }
+            ]
         }
     },
     "title": "Faction"

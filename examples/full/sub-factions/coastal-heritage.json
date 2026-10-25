@@ -1,0 +1,24 @@
+{
+    "$schema": "../../../schema/sub-faction.schema.json",
+    "id": "coastal-heritage",
+    "version": "1.0.0",
+    "name": "Coastal Heritage",
+    "parent": { "faction": "field-army", "versions": ">=1.0.0 <2.0.0" },
+    "group": "heritage",
+    "when": {
+        "if": "choice(stance) == defensive",
+        "message": "Coastal heritage is only for defensive lists"
+    },
+    "specialRules": {
+        "local-knowledge": {
+            "id": "local-knowledge",
+            "name": "Local knowledge",
+            "text": "Deploys after the enemy."
+        },
+        "amphibious": {
+            "id": "amphibious",
+            "name": "Amphibious",
+            "text": "Ignore water terrain."
+        }
+    }
+}

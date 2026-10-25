@@ -1,0 +1,16 @@
+{
+    "$schema": "../../../schema/sub-faction.schema.json",
+    "id": "assault-doctrine",
+    "version": "1.0.0",
+    "name": "Assault Doctrine",
+    "parent": { "faction": "field-army", "versions": ">=1.0.0 <2.0.0" },
+    "group": "doctrine",
+    "description": "Doctrines are in a max-1 group, so both may define `drill` differently.",
+    "specialRules": {
+        "drill": {
+            "id": "drill",
+            "name": "Drill",
+            "text": "Assault drill: +1 to charge."
+        }
+    }
+}
