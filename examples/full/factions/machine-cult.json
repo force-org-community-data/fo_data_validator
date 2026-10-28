@@ -1,0 +1,73 @@
+{
+    "$schema": "../../../schema/faction.schema.json",
+    "id": "machine-cult",
+    "version": "1.0.0",
+    "name": "Machine Cult",
+    "description": "A second faction of the game, whose automata other factions' slots may draw on (a slot `source`).",
+    "game": { "id": "full-game", "versions": ">=1.0.0 <2.0.0" },
+    "units": {
+        "battle-automata": {
+            "id": "battle-automata",
+            "name": "Battle Automata",
+            "role": "heavy",
+            "type": "vehicle",
+            "traits": ["Cohort"],
+            "cost": { "points": 120 },
+            "modelCount": 1,
+            "profiles": [
+                {
+                    "id": "battle-automata",
+                    "name": "Battle Automata",
+                    "template": "vehicle",
+                    "stats": {
+                        "move": "6",
+                        "hull": "4",
+                        "armour": "3",
+                        "capacity": "0"
+                    }
+                }
+            ],
+            "defaultWargear": [{ "kind": "weapon", "id": "power-fist" }]
+        },
+        "siege-automata": {
+            "id": "siege-automata",
+            "name": "Siege Automata",
+            "role": "heavy",
+            "type": "vehicle",
+            "traits": ["Cohort"],
+            "cost": { "points": 150 },
+            "modelCount": 1,
+            "profiles": [
+                {
+                    "id": "siege-automata",
+                    "name": "Siege Automata",
+                    "template": "vehicle",
+                    "stats": {
+                        "move": "5",
+                        "hull": "5",
+                        "armour": "3",
+                        "capacity": "0"
+                    }
+                }
+            ],
+            "defaultWargear": [{ "kind": "weapon", "id": "power-fist" }]
+        }
+    },
+    "weapons": {
+        "power-fist": {
+            "id": "power-fist",
+            "name": "Power fist",
+            "template": "melee",
+            "profiles": [
+                {
+                    "name": "Power fist",
+                    "stats": { "attacks": "3", "damage": "3" }
+                }
+            ]
+        }
+    },
+    "equipment": {},
+    "upgrades": {},
+    "specialRules": {},
+    "detachments": {}
+}

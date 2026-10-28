@@ -45,7 +45,7 @@ A source is any public repo or static URL with a `forceorg.json` manifest at its
 - **`examples`** lists example lists the checker runs (§10).
 - **`schemaVersion`** is this schema's version and **`expressionVersion`** the expression language's; consumers refuse sources newer than they understand (expression spec §14).
 
-**Ids across sources.** Internally every record is keyed by source (`<source>::<id>`), so two sources may provide a faction with the same id. A faction resolves references within itself, then its game. The only cross-source references are a faction's game and a sub-faction's `parent`, which may be a faction from another source in the same game. Expressions never need source prefixes.
+**Ids across sources.** Internally every record is keyed by source (`<source>::<id>`), so two sources may provide a faction with the same id. A faction resolves references within itself, then its game. The only cross-source references are a faction's game, a sub-faction's `parent`, which may be a faction from another source in the same game, and a slot's `source` (§7.1), which names a faction of the same game. Expressions never need source prefixes.
 
 ## 3. Game definition (`GameSystem`)
 
@@ -152,7 +152,7 @@ The game declares unit and weapon templates; each profile names its template and
 
 Behaviour that once needed a TypeScript "mechanic" is plain data built from two general pieces, so the engine holds no game's rules and the Data Editor edits them like any record.
 
-**Slot options** (`slotOptions` records in the game, factions and sub-factions) are choices a slot with a tag offers, one per tag, e.g. special benefits or enhancements. Each names its `slotTag`, may limit itself to slots of some roles (`slotRoles`), may cost something (`cost`, added to the unit in the slot) and has `effects`: stat changes and special rules on the unit's profiles, an extra slot in the group (`slot`, with role choices), or other roles allowed into the slot (`allowedRoles`). The tag's `optionLabel` names them in the UI ("Prime Option"). A list slot records the picks as `slotOptions: { [tag]: { option, role? } }`.
+**Slot options** (`slotOptions` records in the game, factions and sub-factions) are choices a slot with a tag offers, one per tag, e.g. special benefits or enhancements. Each names its `slotTag`, may limit itself to slots of some roles (`slotRoles`), may cost something (`cost`, added to the unit in the slot) and has `effects`: stat changes and special rules on the unit's profiles, an extra slot in the group (`slot`, with role choices and optionally `units`, a `source` and `effects`, §7.1), or other roles allowed into the slot (`allowedRoles`). The tag's `optionLabel` names them in the UI ("Prime Option"). A list slot records the picks as `slotOptions: { [tag]: { option, role? } }`.
 
 **Contingent resources** (`scope: "contingent"`, §3.5) are granted and spent within each contingent:
 
@@ -297,7 +297,7 @@ A saved list's unit records `composition: { [blockId]: copies }` instead of `add
 
 A trait effect (validator 1.2.0) changes a unit's `traits`: `add` gives traits, `remove` takes them away if present, and `replace` takes away any of `from` and gives `to` only if one was there. Traits belong to the whole unit, so there is no profile filter and its `when` has no `profile` scope. It may appear wherever stat and special-rule effects do: option `effects`, slot-option `effects`, unit-modifier `actions` and detachment `effects` (§7). At least one of `add`, `remove` and `replace` is required; a trait both given and taken away is a warning.
 
-**Order.** The app resolves a unit's traits in steps: the unit's own `traits`, then sub-faction unit modifiers, option effects, the detachment's effects, and slot-option effects. Each step's conditions see the traits from the steps before it. A detachment's and its slots' `units` selectors see the unit's traits before the detachment's and slot options' effects (a detachment can't admit units by the trait it gives them). Everything else (`trait:` references in other expressions, list rules) sees the final traits.
+**Order.** The app resolves a unit's traits in steps: the unit's own `traits`, then sub-faction unit modifiers, option effects, the detachment's effects, the slot's `effects` (§7.1), and slot-option effects. Each step's conditions see the traits from the steps before it. A detachment's and its slots' `units` selectors see the unit's traits before the detachment's and slot options' effects (a detachment can't admit units by the trait it gives them); a slot with a `source` sees only the unit's own `traits`. Everything else (`trait:` references in other expressions, list rules) sees the final traits.
 
 ## 6. Upgrades and options
 
@@ -350,6 +350,27 @@ A unit's upgrades hold options or references to faction upgrades, and may use `r
 - Detachments may have `when`, `min` and `max`. `min` makes a detachment mandatory, e.g. a required veteran formation.
 - **`effects`** (validator 1.2.0): stat, special-rule and trait effects applied to every unit in the detachment, including units in slots a slot option adds. "Every unit in this detachment gains the Gun Line trait" is `"effects": [{ "kind": "trait", "add": ["Gun Line"] }]`. Each effect may carry `profiles` (stat and special-rule effects) and `when`.
 
+### 7.1 Slots filled from elsewhere
+
+Validator 1.3.0. Some rules add a slot that units from another faction, or from other sub-factions of the contingent's faction, may fill: "this slot may hold any unit from another Legion", "this slot may hold one Battle Automata from the Machine Cult". Such a slot has a **`source`**:
+
+```json
+{
+    "roleChoices": ["troop", "support", "heavy"],
+    "source": { "faction": "field-army", "subFactions": "any" },
+    "units": { "exclude": [{ "traits": ["Veterans"] }, { "profiles": { "anyOf": ["Unique"] } }] },
+    "effects": [{ "kind": "trait", "replace": { "from": ["Field Army", "Disciplined"], "to": "Veterans" } }]
+}
+```
+
+- **`source.faction`** is any faction of the game, possibly from another source, and may be the contingent's own. **`source.subFactions`** adds units of that faction's sub-factions, whether or not the contingent took them: `"any"` for every one loaded, or a list of ids. Left out, only the faction's own units are offered (not its sub-factions', and not the contingent's).
+- **Picking units.** The slot's `units` selector picks among the source's units, so a rule written as "any unit except…" needs no list of ids and keeps working as units are added. Its `unitIds` are the source's units; named selectors (`"@name"`) are the slot owner's, as everywhere. The selector sees only each unit's own `traits`, before any unit modifier or effect. The detachment's own `units` doesn't apply to the slot. Use `exclude` (§8) for "not…" conditions.
+- **The unit keeps its own records.** Its wargear, special rules, upgrades and composition are the ones its home faction (and home sub-faction) defines, already checked there. Its home sub-faction's unit modifiers don't come along; the contingent's sub-faction unit modifiers apply as to any unit of the contingent, and the slot may be filled even though the unit isn't of the contingent's faction.
+- **`effects`** on the slot (stat, special-rule and trait effects) apply to the unit in it, after the detachment's `effects`, which apply too. A trait effect is how a rule like "its faction trait becomes Veterans" is written. Their special rules resolve where the slot is defined.
+- **Where it can appear:** a detachment's `slots` (with `roles`), a slot option's `slot` effect, and a special rule's **`slots`**: slots each unit with the rule adds to its group, once per unit ("when a model with this rule is in a detachment, add a slot…"). A slot a mechanic adds has `roleChoices` (at least one), optional `units`, `source` and `effects`.
+
+The checker reports an unknown `source` faction or sub-faction (a sub-faction must have the source faction as its parent), and `unitIds` that aren't among the source's units, and checks the slot's effects like any effect.
+
 ## 8. Selectors
 
 ```json
@@ -375,6 +396,8 @@ A named selector's own `match` is always inline, so selectors can't refer to eac
 
 **`traits`** (validator 1.2.0) matches a unit with any of the listed traits, case-insensitively: `{ "traits": ["Field Army"] }`. A trait no unit has or is given is a warning. Profile filters don't match traits; use `when: unit.is(trait:…)` on an effect instead.
 
+**`exclude`** (validator 1.3.0) lists units to leave out: a unit matching any entry doesn't match the selector. Each entry takes `unitIds`, `roles`, `traits` and `profiles`, all of which must match, like a selector. `{ "exclude": [{ "traits": ["Veterans"] }, { "profiles": { "anyOf": ["Unique"] } }] }` is "not a Veterans unit, and no Unique model": unlike `profiles.noneOf`, which matches a unit with *some* profile outside the list, an excluded `profiles.anyOf` leaves out a unit with *any* matching profile.
+
 ## 9. Expressions in data
 
 Expressions appear only in `when.if`, `min`, `max`, `limit.max`, `repeat.max` and cost values (see the expression spec §3). Examples from the example sources:
@@ -395,7 +418,7 @@ A source may list example lists in its manifest's `examples`: a list plus `expec
 The checker validates:
 
 - the schema;
-- ids equal keys and every reference resolves (game vocabulary, templates and stat keys, wargear, upgrades, sub-choices, parents and overrides);
+- ids equal keys and every reference resolves (game vocabulary, templates and stat keys, wargear, upgrades, sub-choices, parents, overrides and slot sources);
 - expressions (expression spec §12) and lint (§13);
 - the example lists (by the app, not the validator).
 

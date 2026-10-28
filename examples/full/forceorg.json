@@ -8,7 +8,10 @@
     "provides": [
         {
             "game": "game.json",
-            "factions": ["factions/field-army.json"],
+            "factions": [
+                "factions/field-army.json",
+                "factions/machine-cult.json"
+            ],
             "subFactions": [
                 "sub-factions/veterans.json",
                 "sub-factions/assault-doctrine.json",

@@ -79,19 +79,35 @@ export const ProfileFilterSchema = z
         "Picks profiles by their type and tags (the unit's included), matched as case-insensitive text. Left out, every profile is picked."
     );
 
+const unitMatch = {
+    unitIds: z.array(SlugSchema).optional(),
+    roles: z.array(SlugSchema).optional(),
+    traits: z
+        .array(z.string())
+        .optional()
+        .describe(
+            'a unit matches when it has any of these traits, matched as case-insensitive text'
+        ),
+    profiles: ProfileFilterSchema.optional().describe(
+        'a unit matches when one of its profiles does (or the unit itself, if it has no profiles)'
+    ),
+};
+
+export const UnitExclusionSchema = z
+    .strictObject(unitMatch)
+    .describe(
+        'Units to leave out, matched like a selector (its fields all apply); e.g. `{ "profiles": { "anyOf": ["Unique"] } }` leaves out every unit with a Unique profile'
+    );
+
 export const UnitSelectorSchema = z
     .strictObject({
-        unitIds: z.array(SlugSchema).optional(),
-        roles: z.array(SlugSchema).optional(),
-        traits: z
-            .array(z.string())
+        ...unitMatch,
+        exclude: z
+            .array(UnitExclusionSchema)
             .optional()
             .describe(
-                'a unit matches when it has any of these traits, matched as case-insensitive text'
+                'a unit that matches any of these does not match the selector'
             ),
-        profiles: ProfileFilterSchema.optional().describe(
-            'a unit matches when one of its profiles does (or the unit itself, if it has no profiles)'
-        ),
     })
     .describe(
         'Picks units by id, role, trait and profile type/tags; left out, a field matches every unit'
@@ -183,6 +199,49 @@ export const TraitEffectSchema = z
     .describe(
         "changes the unit's traits (traits belong to the whole unit, so there is no profile filter); traits match as case-insensitive text"
     );
+
+/* Slots filled from another faction (or other sub-factions of one) */
+
+export const SlotSourceSchema = z
+    .strictObject({
+        faction: SlugSchema.describe(
+            "a faction of the same game, possibly from another source; may be the contingent's own"
+        ),
+        subFactions: z
+            .union([z.literal('any'), z.array(SlugSchema)])
+            .optional()
+            .describe(
+                "units of these sub-factions of `faction` may fill the slot too (`any` = every one loaded), whether or not the contingent took them; left out, only the faction's own units"
+            ),
+    })
+    .describe(
+        "Where a slot's units come from instead of the contingent. Units keep their own records (wargear, rules, upgrades) but not their home sub-faction's unit modifiers. The slot's `units` selector picks among them, seeing only each unit's own traits; the detachment's `units` doesn't apply"
+    );
+
+export const SlotUnitEffectSchema = z
+    .discriminatedUnion('kind', [
+        StatEffectSchema,
+        SpecialRuleEffectSchema,
+        TraitEffectSchema,
+    ])
+    .describe(
+        "applied to the unit filling the slot, after the detachment's effects, e.g. replacing a borrowed unit's faction trait"
+    );
+
+const addedSlot = {
+    roleChoices: z
+        .array(SlugSchema)
+        .describe("the slot's role; with several the player picks one"),
+    units: UnitSelectorOrRefSchema.optional().describe(
+        "only matching units may fill the slot; with a `source`, `unitIds` are the source's units"
+    ),
+    source: SlotSourceSchema.optional(),
+    effects: z.array(SlotUnitEffectSchema).optional(),
+};
+
+export const AddedSlotSchema = z
+    .strictObject(addedSlot)
+    .describe('A slot a mechanic adds to a group');
 
 /* ------------------------------------------------------------------ */
 /* Game definition                                                     */
@@ -422,6 +481,12 @@ export const SpecialRuleSchema = z.strictObject({
     grants: CostsSchema.optional().describe(
         'contingent resources a unit with the rule grants its contingent (negative takes some away). Expressions may use the `rule` scope, e.g. Quartermaster (X) `{ "reserve": "rule.value() - 1" }`'
     ),
+    slots: z
+        .array(AddedSlotSchema)
+        .optional()
+        .describe(
+            'slots each unit with the rule adds to its group, e.g. one filled from another faction'
+        ),
 });
 
 export const WargearKindSchema = z.enum(['weapon', 'equipment']);
@@ -753,8 +818,10 @@ export const SlotSchema = z.strictObject({
             "the slot may be added more than once, each copy holding one unit (a team's vehicles, optional slots); `max` left out = no limit"
         ),
     units: UnitSelectorOrRefSchema.optional().describe(
-        'only matching units may fill this slot'
+        "only matching units may fill this slot; with a `source`, `unitIds` are the source's units"
     ),
+    source: SlotSourceSchema.optional(),
+    effects: z.array(SlotUnitEffectSchema).optional(),
     when: ConditionSchema.optional(),
 });
 
@@ -792,7 +859,7 @@ export const DetachmentSchema = z.strictObject({
     type: SlugSchema.describe('a group type id from the game'),
     slots: z.array(SlotSchema),
     units: UnitSelectorOrRefSchema.optional().describe(
-        'only matching units may fill any slot, including slots a mechanic adds'
+        'only matching units may fill any slot, including slots a mechanic adds, except slots with a `source`'
     ),
     requires: z
         .array(DetachmentRequirementSchema)
@@ -821,10 +888,7 @@ export const DetachmentSchema = z.strictObject({
 /* Slot options (choices a tagged slot offers) */
 
 export const SlotEffectSchema = z
-    .strictObject({
-        kind: z.literal('slot'),
-        roleChoices: z.array(SlugSchema),
-    })
+    .strictObject({ kind: z.literal('slot'), ...addedSlot })
     .describe(
         'adds a slot to the group; with several roles the player picks one'
     );

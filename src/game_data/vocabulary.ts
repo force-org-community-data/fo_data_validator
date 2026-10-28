@@ -42,7 +42,10 @@ function tagsOf(records: Array<Partial<FactionRecords>>) {
 
 /* Records that may name traits: units, and every effect that can give one */
 type TraitSource = Partial<
-    Pick<FactionRecords, 'units' | 'upgrades' | 'detachments' | 'slotOptions'>
+    Pick<
+        FactionRecords,
+        'units' | 'upgrades' | 'detachments' | 'slotOptions' | 'specialRules'
+    >
 > &
     Partial<Pick<SubFaction, 'unitModifiers'>>;
 
@@ -68,10 +71,17 @@ function traitsOf(sources: Array<TraitSource>) {
         }
         for (const upgrade of Object.values(s.upgrades ?? {}))
             fromOptions(upgrade.options);
-        for (const d of Object.values(s.detachments ?? {}))
+        for (const d of Object.values(s.detachments ?? {})) {
             d.effects?.forEach(fromEffect);
-        for (const o of Object.values(s.slotOptions ?? {}))
+            for (const slot of d.slots) slot.effects?.forEach(fromEffect);
+        }
+        for (const o of Object.values(s.slotOptions ?? {})) {
             o.effects?.forEach(fromEffect);
+            for (const e of o.effects ?? [])
+                if (e.kind === 'slot') e.effects?.forEach(fromEffect);
+        }
+        for (const r of Object.values(s.specialRules ?? {}))
+            for (const slot of r.slots ?? []) slot.effects?.forEach(fromEffect);
         for (const m of Object.values(s.unitModifiers ?? {}))
             m.actions.forEach(fromEffect);
     }

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0
+
+- **Slots filled from another faction.** A slot may have a `source`: `{ faction, subFactions?: "any" | [ids] }`, a faction of the same game (possibly from another source) and optionally its sub-factions, whose units may fill the slot whether or not the contingent took them. The slot's `units` selector picks among them (its `unitIds` are the source's units) and sees only each unit's own traits; the detachment's `units` doesn't apply. Borrowed units keep their own records but not their home sub-faction's unit modifiers.
+- **Slot `effects`**: stat, special-rule and trait effects on the unit in the slot, after the detachment's effects, e.g. replacing a borrowed unit's faction trait.
+- `source`, `units` and `effects` are allowed on detachment slots and on slot options' `slot` effects.
+- **Special rules may add slots**: `slots`, each `{ roleChoices, units?, source?, effects? }`, added to the group once per unit with the rule.
+- **Selector `exclude`**: units matching any entry (`unitIds`, `roles`, `traits`, `profiles`) don't match, e.g. `{ "exclude": [{ "profiles": { "anyOf": ["Unique"] } }] }` for "no Unique models".
+- New checks: unknown source factions and sub-factions, `unitIds` not among the source's units, a slot a mechanic adds with no role.
+- `schemaVersion` stays 1 and `expressionVersion` stays 1; everything is additive. Data using these needs validator ≥1.3.0 and an app that supports them.
+
 ## 1.2.0
 
 - **Composition blocks.** A unit may list `composition`: blocks of models bought together, `{ id, name?, description?, profiles: { profileId: count }, min? (default 1), max? (default min), cost? }`. They give the number of models of each profile and how the unit grows, including multi-model increments (a Gun Crew of a Gunner and a Loader at +35 per crew) and extra models of one profile only. `modelCount` stays required and must match the blocks at their `min`; `additionalModels` isn't allowed alongside. `perModel` default wargear with a `profileId` now means one per model of that profile.
