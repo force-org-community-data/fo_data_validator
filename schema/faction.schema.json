@@ -475,6 +475,14 @@
                                 "$ref": "#/definitions/__schema5"
                             }
                         ]
+                    },
+                    "slots": {
+                        "description": "slots each unit with the rule adds to its group, e.g. one filled from another faction",
+                        "allOf": [
+                            {
+                                "$ref": "#/definitions/__schema79"
+                            }
+                        ]
                     }
                 },
                 "required": [
@@ -526,7 +534,7 @@
                                     "description": "game-declared slot tags, e.g. `prime`",
                                     "allOf": [
                                         {
-                                            "$ref": "#/definitions/__schema79"
+                                            "$ref": "#/definitions/__schema98"
                                         }
                                     ]
                                 },
@@ -534,7 +542,7 @@
                                     "description": "must be filled for the list to be valid (compulsory slots)",
                                     "allOf": [
                                         {
-                                            "$ref": "#/definitions/__schema80"
+                                            "$ref": "#/definitions/__schema99"
                                         }
                                     ]
                                 },
@@ -542,17 +550,30 @@
                                     "description": "the slot may be added more than once, each copy holding one unit (a team's vehicles, optional slots); `max` left out = no limit",
                                     "allOf": [
                                         {
-                                            "$ref": "#/definitions/__schema81"
+                                            "$ref": "#/definitions/__schema100"
                                         }
                                     ]
                                 },
                                 "units": {
-                                    "description": "only matching units may fill this slot",
+                                    "description": "only matching units may fill this slot; with a `source`, `unitIds` are the source's units",
                                     "allOf": [
                                         {
                                             "$ref": "#/definitions/__schema82"
                                         }
                                     ]
+                                },
+                                "source": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/definitions/__schema92"
+                                        }
+                                    ]
+                                },
+                                "effects": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/definitions/__schema97"
+                                    }
                                 },
                                 "when": {
                                     "allOf": [
@@ -569,7 +590,7 @@
                         }
                     },
                     "units": {
-                        "description": "only matching units may fill any slot, including slots a mechanic adds",
+                        "description": "only matching units may fill any slot, including slots a mechanic adds, except slots with a `source`",
                         "allOf": [
                             {
                                 "$ref": "#/definitions/__schema82"
@@ -580,7 +601,7 @@
                         "description": "all must be met",
                         "allOf": [
                             {
-                                "$ref": "#/definitions/__schema89"
+                                "$ref": "#/definitions/__schema101"
                             }
                         ]
                     },
@@ -588,7 +609,7 @@
                         "description": "shown when a requirement isn't met",
                         "allOf": [
                             {
-                                "$ref": "#/definitions/__schema94"
+                                "$ref": "#/definitions/__schema106"
                             }
                         ]
                     },
@@ -627,7 +648,7 @@
                         "description": "applied to every unit in the detachment, e.g. \"Every unit in this detachment gains the Gun Line trait\"",
                         "allOf": [
                             {
-                                "$ref": "#/definitions/__schema95"
+                                "$ref": "#/definitions/__schema107"
                             }
                         ]
                     }
@@ -689,19 +710,19 @@
                         "$ref": "#/definitions/__schema1"
                     },
                     "text": {
-                        "$ref": "#/definitions/__schema96"
+                        "$ref": "#/definitions/__schema108"
                     },
                     "slotTag": {
-                        "$ref": "#/definitions/__schema97"
+                        "$ref": "#/definitions/__schema109"
                     },
                     "slotRoles": {
-                        "$ref": "#/definitions/__schema98"
+                        "$ref": "#/definitions/__schema110"
                     },
                     "cost": {
-                        "$ref": "#/definitions/__schema100"
+                        "$ref": "#/definitions/__schema112"
                     },
                     "effects": {
-                        "$ref": "#/definitions/__schema101"
+                        "$ref": "#/definitions/__schema113"
                     }
                 },
                 "required": [
@@ -732,7 +753,7 @@
                         "$ref": "#/definitions/__schema1"
                     },
                     "values": {
-                        "$ref": "#/definitions/__schema106"
+                        "$ref": "#/definitions/__schema117"
                     },
                     "default": {
                         "$ref": "#/definitions/__schema1"
@@ -789,7 +810,7 @@
             "description": "the independent sub-faction picks a contingent of this faction makes; sub-factions name theirs in `group`. Sub-factions without a `group` are in the `default` group (max 1), which may be declared here to name it or change its limits",
             "allOf": [
                 {
-                    "$ref": "#/definitions/__schema108"
+                    "$ref": "#/definitions/__schema119"
                 }
             ]
         }
@@ -1709,27 +1730,42 @@
         "__schema79": {
             "type": "array",
             "items": {
-                "$ref": "#/definitions/__schema1"
+                "type": "object",
+                "properties": {
+                    "roleChoices": {
+                        "$ref": "#/definitions/__schema80"
+                    },
+                    "units": {
+                        "$ref": "#/definitions/__schema81"
+                    },
+                    "source": {
+                        "$ref": "#/definitions/__schema91"
+                    },
+                    "effects": {
+                        "$ref": "#/definitions/__schema96"
+                    }
+                },
+                "required": [
+                    "roleChoices"
+                ],
+                "additionalProperties": false,
+                "description": "A slot a mechanic adds to a group"
             }
         },
         "__schema80": {
-            "type": "boolean"
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/__schema1"
+            },
+            "description": "the slot's role; with several the player picks one"
         },
         "__schema81": {
-            "type": "object",
-            "properties": {
-                "min": {
-                    "type": "number"
-                },
-                "max": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/__schema6"
-                        }
-                    ]
+            "description": "only matching units may fill the slot; with a `source`, `unitIds` are the source's units",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema82"
                 }
-            },
-            "additionalProperties": false
+            ]
         },
         "__schema82": {
             "anyOf": [
@@ -1757,6 +1793,9 @@
                 },
                 "profiles": {
                     "$ref": "#/definitions/__schema88"
+                },
+                "exclude": {
+                    "$ref": "#/definitions/__schema89"
                 }
             },
             "additionalProperties": false,
@@ -1797,6 +1836,134 @@
             ]
         },
         "__schema89": {
+            "description": "a unit that matches any of these does not match the selector",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema90"
+                }
+            ]
+        },
+        "__schema90": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "unitIds": {
+                        "$ref": "#/definitions/__schema84"
+                    },
+                    "roles": {
+                        "$ref": "#/definitions/__schema85"
+                    },
+                    "traits": {
+                        "$ref": "#/definitions/__schema86"
+                    },
+                    "profiles": {
+                        "$ref": "#/definitions/__schema88"
+                    }
+                },
+                "additionalProperties": false,
+                "description": "Units to leave out, matched like a selector (its fields all apply); e.g. `{ \"profiles\": { \"anyOf\": [\"Unique\"] } }` leaves out every unit with a Unique profile"
+            }
+        },
+        "__schema91": {
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema92"
+                }
+            ]
+        },
+        "__schema92": {
+            "type": "object",
+            "properties": {
+                "faction": {
+                    "$ref": "#/definitions/__schema93"
+                },
+                "subFactions": {
+                    "$ref": "#/definitions/__schema94"
+                }
+            },
+            "required": [
+                "faction"
+            ],
+            "additionalProperties": false,
+            "description": "Where a slot's units come from instead of the contingent. Units keep their own records (wargear, rules, upgrades) but not their home sub-faction's unit modifiers. The slot's `units` selector picks among them, seeing only each unit's own traits; the detachment's `units` doesn't apply"
+        },
+        "__schema93": {
+            "description": "a faction of the same game, possibly from another source; may be the contingent's own",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema1"
+                }
+            ]
+        },
+        "__schema94": {
+            "description": "units of these sub-factions of `faction` may fill the slot too (`any` = every one loaded), whether or not the contingent took them; left out, only the faction's own units",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/__schema95"
+                }
+            ]
+        },
+        "__schema95": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "const": "any"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/__schema1"
+                    }
+                }
+            ]
+        },
+        "__schema96": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/__schema97"
+            }
+        },
+        "__schema97": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/__schema53"
+                },
+                {
+                    "$ref": "#/definitions/__schema60"
+                },
+                {
+                    "$ref": "#/definitions/__schema61"
+                }
+            ],
+            "description": "applied to the unit filling the slot, after the detachment's effects, e.g. replacing a borrowed unit's faction trait"
+        },
+        "__schema98": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/__schema1"
+            }
+        },
+        "__schema99": {
+            "type": "boolean"
+        },
+        "__schema100": {
+            "type": "object",
+            "properties": {
+                "min": {
+                    "type": "number"
+                },
+                "max": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/__schema6"
+                        }
+                    ]
+                }
+            },
+            "additionalProperties": false
+        },
+        "__schema101": {
             "type": "array",
             "items": {
                 "type": "object",
@@ -1805,10 +1972,10 @@
                         "$ref": "#/definitions/__schema82"
                     },
                     "count": {
-                        "$ref": "#/definitions/__schema90"
+                        "$ref": "#/definitions/__schema102"
                     },
                     "scope": {
-                        "$ref": "#/definitions/__schema92"
+                        "$ref": "#/definitions/__schema104"
                     }
                 },
                 "required": [
@@ -1818,36 +1985,36 @@
                 "description": "units the list must already hold before the detachment can be taken"
             }
         },
-        "__schema90": {
+        "__schema102": {
             "description": "matching units needed; left out = 1",
             "allOf": [
                 {
-                    "$ref": "#/definitions/__schema91"
+                    "$ref": "#/definitions/__schema103"
                 }
             ]
         },
-        "__schema91": {
+        "__schema103": {
             "type": "number"
         },
-        "__schema92": {
+        "__schema104": {
             "description": "where they're counted: the detachment's contingent outside it (default) or its root group",
             "allOf": [
                 {
-                    "$ref": "#/definitions/__schema93"
+                    "$ref": "#/definitions/__schema105"
                 }
             ]
         },
-        "__schema93": {
+        "__schema105": {
             "type": "string",
             "enum": [
                 "contingent",
                 "root"
             ]
         },
-        "__schema94": {
+        "__schema106": {
             "type": "string"
         },
-        "__schema95": {
+        "__schema107": {
             "type": "array",
             "items": {
                 "oneOf": [
@@ -1864,10 +2031,10 @@
                 "description": "applied to every unit in the detachment, including units in slots added later"
             }
         },
-        "__schema96": {
+        "__schema108": {
             "type": "string"
         },
-        "__schema97": {
+        "__schema109": {
             "description": "offered on slots with this tag",
             "allOf": [
                 {
@@ -1875,21 +2042,21 @@
                 }
             ]
         },
-        "__schema98": {
+        "__schema110": {
             "description": "only offered on slots of these roles; left out = any role",
             "allOf": [
                 {
-                    "$ref": "#/definitions/__schema99"
+                    "$ref": "#/definitions/__schema111"
                 }
             ]
         },
-        "__schema99": {
+        "__schema111": {
             "type": "array",
             "items": {
                 "$ref": "#/definitions/__schema1"
             }
         },
-        "__schema100": {
+        "__schema112": {
             "description": "added to the cost of the unit in the slot",
             "allOf": [
                 {
@@ -1897,7 +2064,7 @@
                 }
             ]
         },
-        "__schema101": {
+        "__schema113": {
             "type": "array",
             "items": {
                 "oneOf": [
@@ -1914,10 +2081,19 @@
                         "type": "object",
                         "properties": {
                             "kind": {
-                                "$ref": "#/definitions/__schema102"
+                                "$ref": "#/definitions/__schema114"
                             },
                             "roleChoices": {
-                                "$ref": "#/definitions/__schema103"
+                                "$ref": "#/definitions/__schema80"
+                            },
+                            "units": {
+                                "$ref": "#/definitions/__schema81"
+                            },
+                            "source": {
+                                "$ref": "#/definitions/__schema91"
+                            },
+                            "effects": {
+                                "$ref": "#/definitions/__schema96"
                             }
                         },
                         "required": [
@@ -1931,10 +2107,10 @@
                         "type": "object",
                         "properties": {
                             "kind": {
-                                "$ref": "#/definitions/__schema104"
+                                "$ref": "#/definitions/__schema115"
                             },
                             "roles": {
-                                "$ref": "#/definitions/__schema105"
+                                "$ref": "#/definitions/__schema116"
                             }
                         },
                         "required": [
@@ -1947,27 +2123,21 @@
                 ]
             }
         },
-        "__schema102": {
+        "__schema114": {
             "type": "string",
             "const": "slot"
         },
-        "__schema103": {
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/__schema1"
-            }
-        },
-        "__schema104": {
+        "__schema115": {
             "type": "string",
             "const": "allowedRoles"
         },
-        "__schema105": {
+        "__schema116": {
             "type": "array",
             "items": {
                 "$ref": "#/definitions/__schema1"
             }
         },
-        "__schema106": {
+        "__schema117": {
             "type": "object",
             "propertyNames": {
                 "$ref": "#/definitions/__schema1"
@@ -1988,7 +2158,7 @@
                         "description": "resource id → multiplier for the option's cost, e.g. a turret mount `{ \"points\": 3 }`",
                         "allOf": [
                             {
-                                "$ref": "#/definitions/__schema107"
+                                "$ref": "#/definitions/__schema118"
                             }
                         ]
                     },
@@ -2008,7 +2178,7 @@
                 "additionalProperties": false
             }
         },
-        "__schema107": {
+        "__schema118": {
             "type": "object",
             "propertyNames": {
                 "$ref": "#/definitions/__schema1"
@@ -2017,7 +2187,7 @@
                 "type": "number"
             }
         },
-        "__schema108": {
+        "__schema119": {
             "type": "object",
             "propertyNames": {
                 "$ref": "#/definitions/__schema1"
@@ -2035,10 +2205,10 @@
                         "$ref": "#/definitions/__schema1"
                     },
                     "min": {
-                        "$ref": "#/definitions/__schema109"
+                        "$ref": "#/definitions/__schema120"
                     },
                     "max": {
-                        "$ref": "#/definitions/__schema110"
+                        "$ref": "#/definitions/__schema121"
                     }
                 },
                 "required": [
@@ -2049,7 +2219,7 @@
                 "description": "An independent sub-faction pick, e.g. a doctrine and a heritage: a contingent takes between `min` and `max` of the sub-factions in each group"
             }
         },
-        "__schema109": {
+        "__schema120": {
             "description": "how many sub-factions of this group a contingent must take; left out = 0. Expressions may use `contingent`, `root`, `main` and `list`",
             "allOf": [
                 {
@@ -2057,7 +2227,7 @@
                 }
             ]
         },
-        "__schema110": {
+        "__schema121": {
             "description": "how many sub-factions of this group a contingent may take; left out = 1. Expressions may use `contingent`, `root`, `main` and `list`, e.g. `1 + (list.has(unit:x) ? 1 : 0)`",
             "allOf": [
                 {

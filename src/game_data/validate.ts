@@ -11,6 +11,7 @@ import {
 import { didYouMean } from '../expressions/diagnostics';
 import { DEFAULT_SUB_FACTION_GROUP } from './schema';
 import type {
+    AddedSlot,
     Condition,
     Detachment,
     Faction,
@@ -20,6 +21,8 @@ import type {
     Option,
     CostTarget,
     SlotOption,
+    SlotSource,
+    SlotUnitEffect,
     SpecialRule,
     SubChoice,
     SpecialRuleEffect,
@@ -29,6 +32,7 @@ import type {
     TraitEffect,
     SubFactionGroup,
     Unit,
+    UnitExclusion,
     UnitSelectorOrRef,
     Upgrade,
     UpgradeReference,
@@ -1119,10 +1123,15 @@ class Validator {
         }
     }
 
+    /*
+     * `units` are the ids `unitIds` may name: the scope's own, a slot source's,
+     * or `unchecked` when the source is unknown (already reported)
+     */
     private selector(
         path: string,
         selector: UnitSelectorOrRef | undefined,
-        scope: Scope
+        scope: Scope,
+        units: ReadonlyArray<string> | 'unchecked' = keys(scope.records.units)
     ) {
         if (!selector) return;
         if (typeof selector === 'string') {
@@ -1136,21 +1145,104 @@ class Validator {
                 this.report(path, `a selector reference starts with '@'`);
             return;
         }
-        selector.unitIds?.forEach((id) =>
-            this.known(path, 'unit', id, keys(scope.records.units))
+        const traits = (scope.vocabulary.traits ?? []).map(tagId);
+        const match = (at: string, m: UnitExclusion) => {
+            if (units !== 'unchecked')
+                m.unitIds?.forEach((id) => this.known(at, 'unit', id, units));
+            m.roles?.forEach((r) =>
+                this.known(at, 'role', r, keys(scope.game.roles))
+            );
+            for (const trait of m.traits ?? []) {
+                if (!traits.includes(tagId(trait)))
+                    this.report(
+                        at,
+                        `no unit has or is given the trait '${trait}'${didYouMean(tagId(trait), traits)}`,
+                        'warning'
+                    );
+            }
+        };
+        match(path, selector);
+        selector.exclude?.forEach((e, i) => match(`${path}/exclude/${i}`, e));
+    }
+
+    /*
+     * The units a slot source offers (the faction's, plus the sub-factions'
+     * it names), or `unchecked` when the source names something not loaded
+     */
+    private sourceUnits(
+        path: string,
+        source: SlotSource
+    ): ReadonlyArray<string> | 'unchecked' {
+        const factions = this.set.factions.map((f) => f.data);
+        const faction = factions.find((f) => f.id === source.faction);
+        if (!faction) {
+            this.report(
+                path,
+                `unknown faction '${source.faction}'${didYouMean(
+                    source.faction,
+                    factions.map((f) => f.id)
+                )}`
+            );
+            return 'unchecked';
+        }
+        const subs = this.set.subFactions
+            .map((s) => s.data)
+            .filter((s) => s.parent.faction === faction.id);
+        let picked = subs;
+        if (source.subFactions !== 'any') {
+            picked = [];
+            for (const id of source.subFactions ?? []) {
+                const sub = subs.find((s) => s.id === id);
+                if (sub) picked.push(sub);
+                else
+                    this.report(
+                        path,
+                        `'${faction.id}' has no sub-faction '${id}'${didYouMean(
+                            id,
+                            subs.map((s) => s.id)
+                        )}`
+                    );
+            }
+        }
+        return [faction, ...picked].flatMap((r) => keys(r.units));
+    }
+
+    /* A slot's units (from its source, if any) and the effects on them */
+    private slotUnits(
+        path: string,
+        slot: {
+            units?: UnitSelectorOrRef;
+            source?: SlotSource;
+            effects?: Array<SlotUnitEffect>;
+        },
+        scope: Scope
+    ) {
+        if (slot.source)
+            this.selector(
+                path,
+                slot.units,
+                scope,
+                this.sourceUnits(`${path}/source`, slot.source)
+            );
+        else this.selector(path, slot.units, scope);
+        slot.effects?.forEach((effect, i) =>
+            this.effect(
+                `${path}/effects/${i}`,
+                effect,
+                scope,
+                FIELD_SCOPES.effect
+            )
         );
-        selector.roles?.forEach((r) =>
+    }
+
+    /* A slot a mechanic (a slot option, a special rule) adds to a group */
+    private addedSlot(path: string, slot: AddedSlot, scope: Scope) {
+        if (!slot.roleChoices.length)
+            this.report(path, 'a slot needs at least one role');
+        slot.roleChoices.forEach((r) =>
             this.known(path, 'role', r, keys(scope.game.roles))
         );
-        const traits = (scope.vocabulary.traits ?? []).map(tagId);
-        for (const trait of selector.traits ?? []) {
-            if (!traits.includes(tagId(trait)))
-                this.report(
-                    path,
-                    `no unit has or is given the trait '${trait}'${didYouMean(tagId(trait), traits)}`,
-                    'warning'
-                );
-        }
+        this.slotUnits(path, slot, scope);
     }
 
     private detachments(
@@ -1178,7 +1270,7 @@ class Validator {
                 slot.tags?.forEach((t) =>
                     this.known(s, 'slot tag', t, keys(game.slotTags))
                 );
-                this.selector(s, slot.units, scope);
+                this.slotUnits(s, slot, scope);
                 this.condition(
                     s,
                     slot.when,
@@ -1283,6 +1375,9 @@ class Validator {
                     FIELD_SCOPES.ruleGrant,
                     'grant'
                 );
+            rule.slots?.forEach((slot, i) =>
+                this.addedSlot(`${at}/slots/${i}`, slot, scope)
+            );
             if (rule.defaultValue !== undefined && !rule.configurable)
                 this.report(
                     at,
@@ -1317,10 +1412,7 @@ class Validator {
                 );
             option.effects?.forEach((effect, i) => {
                 const e = `${at}/effects/${i}`;
-                if (effect.kind === 'slot')
-                    effect.roleChoices.forEach((r) =>
-                        this.known(e, 'role', r, roles)
-                    );
+                if (effect.kind === 'slot') this.addedSlot(e, effect, scope);
                 else if (effect.kind === 'allowedRoles')
                     effect.roles.forEach((r) =>
                         this.known(e, 'role', r, roles)

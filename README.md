@@ -143,6 +143,8 @@ Data that uses sub-faction groups (`subFactionGroups`, a sub-faction's `group` o
 
 Data that uses composition blocks (`composition`), trait effects, detachment `effects`, selector `traits`, `trait:` references or the `main` scope needs validator **1.2.0** or later, and an app that supports them.
 
+Data that uses slot sources (`source` on a slot, a slot option's `slot` effect or a special rule's `slots`), slot `effects`, special-rule `slots` or selector `exclude` needs validator **1.3.0** or later, and an app that supports them.
+
 ## Releasing
 
 1. Make sure `npm test`, `npm run type-check`, `npm run lint`, `npm run generate-schema -- --check` and `npm run validate-data` pass (CI runs them).

@@ -167,7 +167,7 @@ Required: `id`, `version`, `name`, `game: { "id", "versions" }` and all of `unit
 
 - `weapons`: `{ id, name, template, profiles: [{ name, stats, traits?, specialRules? }] }`, `template` a weapon stat template of the game.
 - `equipment`: `{ id, name, text }`.
-- `specialRules`: `{ id, name, text, configurable?, defaultValue?, grants? }`. Units and profiles use them as `{ "id", "value"? }` in `specialRules`. `grants` gives contingent resources and may use `rule.value()`.
+- `specialRules`: `{ id, name, text, configurable?, defaultValue?, grants?, slots? }`. Units and profiles use them as `{ "id", "value"? }` in `specialRules`. `grants` gives contingent resources and may use `rule.value()`. `slots` are slots each unit with the rule adds to its group (see [Slots filled from another faction](#slots-filled-from-another-faction)).
 
 ### Upgrades and options
 
@@ -217,7 +217,7 @@ A **trait effect** changes the unit's traits. Traits belong to the whole unit, s
 
 `replace` removes any of `from` and adds `to` only if the unit had one of them ("models replace their X trait with Y").
 
-Effects appear on `Option.effects`, slot options, sub-faction unit modifiers and detachments (`effects`). `when` on an effect holds it back until true. The app applies them in this order: the unit's own traits, sub-faction unit modifiers, options, the detachment, slot options. Each step's `when` sees the result of the earlier steps.
+Effects appear on `Option.effects`, slot options, sub-faction unit modifiers and detachments (`effects`). `when` on an effect holds it back until true. The app applies them in this order: the unit's own traits, sub-faction unit modifiers, options, the detachment, the slot's own `effects`, slot options. Each step's `when` sees the result of the earlier steps.
 
 ### Detachments (groups)
 
@@ -244,13 +244,40 @@ Effects appear on `Option.effects`, slot options, sub-faction unit modifiers and
 - `requires` lists units the contingent (or its root group) must already hold; `when`, `min`, `max` and `cost` as above. Unavailable detachments are disabled in the builder's menus and never removed automatically.
 - `effects` (stat, special-rule and trait effects) apply to every unit in the detachment, including slots added later, for rules such as "Every unit in this detachment gains the Gun Line trait": `"effects": [{ "kind": "trait", "add": ["Gun Line"] }]`. The detachment's and slots' `units` selectors see a unit's traits **before** the detachment's own effects, so a detachment can't let units in by the trait it gives them. Needs validator 1.2.0+.
 
+### Slots filled from another faction
+
+Some rules add a slot that another faction's units, or units of other sub-factions of your faction, may fill. Give the slot a `source`, pick units with `units`, and change them with the slot's `effects`. Needs validator 1.3.0+.
+
+"Add a slot of any role but Commander, filled by a unit from another order of this army, but not a Veterans unit or one with a Unique model; its Field Army trait becomes Veterans" (a slot option's `slot` effect):
+
+```json
+{ "kind": "slot", "roleChoices": ["troop", "support", "heavy"],
+  "source": { "faction": "field-army", "subFactions": "any" },
+  "units": { "exclude": [{ "traits": ["Veterans"] }, { "profiles": { "anyOf": ["Unique"] } }] },
+  "effects": [{ "kind": "trait", "replace": { "from": ["Field Army"], "to": "Veterans" } }] }
+```
+
+"When a model with this rule is in a detachment, add a Heavy slot for one Battle Automata from the Machine Cult" (a special rule's `slots`):
+
+```json
+"automata-handler": { "id": "automata-handler", "name": "Automata Handler", "text": "…",
+  "slots": [{ "roleChoices": ["heavy"], "source": { "faction": "machine-cult" },
+              "units": { "unitIds": ["battle-automata"] } }] }
+```
+
+- `source.faction` is any faction of the game, even one from another source. `subFactions` adds its sub-factions' units: `"any"` or a list of ids. Without it only the faction's own units are offered.
+- Prefer a selector that describes the rule (`exclude`, `roles`, `traits`) over a list of `unitIds`: new units then qualify without anyone editing your file. `unitIds` in a sourced slot name the source's units.
+- The selector sees only the unit's own `traits`. The detachment's `units` doesn't apply to the slot; its `effects` do, then the slot's.
+- The unit keeps its own wargear, rules and upgrades. Its home sub-faction's unit modifiers don't come with it.
+- Detachment `slots` take a `source` too (with `roles`, as usual).
+
 ### Selectors
 
-A **UnitSelector** picks units: `{ "unitIds": [...], "roles": [...], "traits": [...], "profiles": { "anyOf": [...], "noneOf": [...] } }` (omitted field matches all; `traits` matches a unit with any of them, case-insensitively). Profile filters don't look at traits; on an effect use `when: unit.is(trait:…)`. Anywhere one is accepted, `"@name"` refers to a **NamedSelector** in `selectors` (`{ "id", "name", "match": <UnitSelector> }`), looked up in the faction (with its sub-faction), then the game.
+A **UnitSelector** picks units: `{ "unitIds": [...], "roles": [...], "traits": [...], "profiles": { "anyOf": [...], "noneOf": [...] }, "exclude": [...] }` (omitted field matches all; `traits` matches a unit with any of them, case-insensitively). `exclude` lists units to leave out, each entry matched like a selector: `{ "exclude": [{ "profiles": { "anyOf": ["Unique"] } }] }` leaves out any unit with a Unique profile, which `profiles.noneOf` can't say (it matches a unit with *some* profile that isn't Unique). Needs validator 1.3.0+. Profile filters don't look at traits; on an effect use `when: unit.is(trait:…)`. Anywhere one is accepted, `"@name"` refers to a **NamedSelector** in `selectors` (`{ "id", "name", "match": <UnitSelector> }`), looked up in the faction (with its sub-faction), then the game.
 
 ### Slot options (benefits for tagged slots)
 
-`slotOptions`: `{ "id", "name", "text", "slotTag", "slotRoles"?, "cost"?, "effects"? }`. A slot with the tag offers one option; effects are stat/special-rule effects, plus at most one `{ "kind": "slot", "roleChoices": [...] }` (an extra slot) and one `{ "kind": "allowedRoles", "roles": [...] }`.
+`slotOptions`: `{ "id", "name", "text", "slotTag", "slotRoles"?, "cost"?, "effects"? }`. A slot with the tag offers one option; effects are stat/special-rule effects, plus at most one `{ "kind": "slot", "roleChoices": [...] }` (an extra slot, which may take `units`, a `source` and `effects`) and one `{ "kind": "allowedRoles", "roles": [...] }`.
 
 ## 6. The sub-faction file (`SubFaction`)
 

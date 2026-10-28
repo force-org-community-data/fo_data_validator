@@ -38,6 +38,7 @@
             "name": "Veteran Squad",
             "role": "troop",
             "type": "infantry",
+            "traits": ["Veterans"],
             "cost": { "points": 130 },
             "modelCount": 5,
             "profiles": [
@@ -107,6 +108,34 @@
             "slotTag": "prime",
             "effects": [
                 { "kind": "specialRule", "rule": { "id": "battle-hardened" } }
+            ]
+        },
+        "borrowed-specialists": {
+            "id": "borrowed-specialists",
+            "name": "Borrowed Specialists",
+            "text": "Adds a Troop, Support or Heavy slot to this formation, filled with a Field Army unit of any order except a Veterans unit or one with a Unique model. Its Field Army or Disciplined trait becomes Veterans.",
+            "slotTag": "prime",
+            "effects": [
+                {
+                    "kind": "slot",
+                    "roleChoices": ["troop", "support", "heavy"],
+                    "source": { "faction": "field-army", "subFactions": "any" },
+                    "units": {
+                        "exclude": [
+                            { "traits": ["Veterans"] },
+                            { "profiles": { "anyOf": ["Unique"] } }
+                        ]
+                    },
+                    "effects": [
+                        {
+                            "kind": "trait",
+                            "replace": {
+                                "from": ["Field Army", "Disciplined"],
+                                "to": "Veterans"
+                            }
+                        }
+                    ]
+                }
             ]
         }
     },
