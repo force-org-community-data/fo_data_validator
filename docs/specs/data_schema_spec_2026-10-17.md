@@ -86,7 +86,7 @@ Each says how groups of that type form contingents:
 
 ### 3.4 Slot tags
 
-Game-declared tags for slots: `"slotTags": { "prime": { "id": "prime", "name": "Prime", "optionLabel": "Prime Option" } }`. A tag offers the slot options written for it (§3.8).
+Game-declared tags for slots: `"slotTags": { "prime": { "id": "prime", "name": "Prime", "optionLabel": "Prime Option", "color": "amber", "icon": "star" } }`. A tag offers the slot options written for it (§3.8). From validator 1.5.0 a tag may name a `color` and an `icon` from the app's fixed palette and icon set, which mark its slots; the checker does not validate the names, since the app owns the lists and falls back to a look derived from the id.
 
 ### 3.5 Resources
 

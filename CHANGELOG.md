@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.0
+
+- **Slot tag look.** A `slotTags` entry may have `color` and `icon`, names from the app's fixed palette and icon set (colours `amber`, `red`, `orange`, `green`, `teal`, `blue`, `violet`, `pink`, `slate`; icons `star`, `spark`, `diamond`, `hex`, `cross`, `flag`, `swords`, `crown`, `fleur`, `circle`, `triangle`, `square`, `target`, `bolt`). The app marks the tag's slots with them; left out or unknown, it picks a look from the tag's id. The names aren't checked here, so the app can add to its lists without a release.
+- `schemaVersion` stays 1 and `expressionVersion` stays 1; everything is additive.
+
 ## 1.4.0
 
 - **Composition blocks that replace models.** A block may carry `replaces: { block, profile }`: each copy takes the place of models of that profile in another block instead of adding models ("one Thallax may be upgraded to a Praetorian for +10 points"). The unit's size and the target's cost are unchanged; only the profile counts move. New checks: the target block and profile exist, a replacing block isn't itself replaced, the models replaced never exceed what the target holds at its `min`, and `modelCount` accounts for them.
