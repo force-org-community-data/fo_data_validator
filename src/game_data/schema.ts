@@ -330,6 +330,12 @@ export const SlotTagSchema = z.strictObject({
         .describe(
             'what the slot options offered on slots with this tag are called, e.g. "Special Option"; left out, "Option"'
         ),
+    color: SlugSchema.optional().describe(
+        "the tag's colour in the app's palette (`amber`, `red`, `orange`, `green`, `teal`, `blue`, `violet`, `pink`, `slate`); left out or unknown, the app picks one from the tag's id"
+    ),
+    icon: SlugSchema.optional().describe(
+        "the tag's mark in the app's icon set (`star`, `spark`, `diamond`, `hex`, `cross`, `flag`, `swords`, `crown`, `fleur`, `circle`, `triangle`, `square`, `target`, `bolt`); left out or unknown, the app picks one from the tag's id"
+    ),
 });
 
 export const COST_TARGETS = [

@@ -78,7 +78,9 @@
             "id": "prime",
             "name": "Prime",
             "description": "May take a slot option",
-            "optionLabel": "Prime Option"
+            "optionLabel": "Prime Option",
+            "color": "amber",
+            "icon": "star"
         }
     },
     "resources": {
