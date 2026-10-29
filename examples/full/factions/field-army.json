@@ -474,6 +474,49 @@
                     "profileId": "loader"
                 }
             ]
+        },        "sapper-team": {
+            "id": "sapper-team",
+            "name": "Sapper Team",
+            "description": "A block that another block replaces models of: one Sapper may be upgraded to a Foreman for +10 points. The Foreman takes a Sapper's place, so the unit keeps its size.",
+            "role": "support",
+            "type": "infantry",
+            "traits": ["Field Army"],
+            "cost": { "points": 60 },
+            "modelCount": 4,
+            "composition": [
+                {
+                    "id": "sapper",
+                    "name": "Sapper",
+                    "profiles": { "sapper": 1 },
+                    "min": 4,
+                    "max": 6,
+                    "cost": { "points": 15 }
+                },
+                {
+                    "id": "foreman",
+                    "name": "Foreman",
+                    "profiles": { "foreman": 1 },
+                    "min": 0,
+                    "max": 1,
+                    "cost": { "points": 10 },
+                    "replaces": { "block": "sapper", "profile": "sapper" }
+                }
+            ],
+            "profiles": [
+                {
+                    "id": "sapper",
+                    "name": "Sapper",
+                    "template": "infantry",
+                    "stats": { "move": "5", "skill": "5", "wounds": "1", "morale": "6", "save": "5+" }
+                },
+                {
+                    "id": "foreman",
+                    "name": "Foreman",
+                    "template": "infantry",
+                    "stats": { "move": "5", "skill": "4", "wounds": "1", "morale": "6", "save": "5+" }
+                }
+            ],
+            "defaultWargear": [{ "kind": "weapon", "id": "rifle", "perModel": true }]
         }
     },
     "weapons": {
@@ -641,6 +684,18 @@
                     }
                 }
             ]
+        }
+    },
+    "listRules": {
+        "vehicles-in-reserve": {
+            "kind": "expression",
+            "id": "vehicles-in-reserve",
+            "scope": "group",
+            "groupTypes": ["reserve"],
+            "when": {
+                "if": "group.count(@vehicles) <= group.count(trait:field-army)",
+                "message": "A Reserve Formation may not hold more vehicles than Field Army units"
+            }
         }
     },
     "selectors": {

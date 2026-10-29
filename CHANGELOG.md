@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.0
+
+- **Composition blocks that replace models.** A block may carry `replaces: { block, profile }`: each copy takes the place of models of that profile in another block instead of adding models ("one Thallax may be upgraded to a Praetorian for +10 points"). The unit's size and the target's cost are unchanged; only the profile counts move. New checks: the target block and profile exist, a replacing block isn't itself replaced, the models replaced never exceed what the target holds at its `min`, and `modelCount` accounts for them.
+- **List rules in factions and sub-factions.** `listRules` is allowed in faction and sub-faction files, applying to contingents using that faction or a sub-faction the contingent took. A sub-faction replaces a parent's rule by listing it in `overrides` with `"kind": "listRules"`; a faction rule with the game's id is a warning, like other hidden records.
+- **Group-scope expression rules.** An `expression` list rule may have `scope: "group"` and `groupTypes`: the condition is checked once for each group (of those types, if given) with the `group`, `contingent`, `root`, `main` and `list` scopes, and flags the list without preventing anything.
+- **Slot options may have `units`**: a selector limiting the option to slots whose unit matches, seen before slot-option effects (a trait from an option or the detachment counts).
+- `schemaVersion` stays 1 and `expressionVersion` stays 1; everything is additive. Data using these needs validator ≥1.4.0 and an app that supports them.
+
 ## 1.3.0
 
 - **Slots filled from another faction.** A slot may have a `source`: `{ faction, subFactions?: "any" | [ids] }`, a faction of the same game (possibly from another source) and optionally its sub-factions, whose units may fill the slot whether or not the contingent took them. The slot's `units` selector picks among them (its `unitIds` are the source's units) and sees only each unit's own traits; the detachment's `units` doesn't apply. Borrowed units keep their own records but not their home sub-faction's unit modifiers.

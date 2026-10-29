@@ -74,6 +74,8 @@ export const FIELD_SCOPES = {
         'list',
     ],
     list: ['main', 'list'],
+    /** a list rule checked once for each group */
+    groupRule: ['group', 'contingent', 'root', 'main', 'list'],
     /** a sub-faction's `when` and its group's `min` / `max`, for the contingent it's taken for */
     subFaction: ['contingent', 'root', 'main', 'list'],
 } satisfies Record<string, ReadonlyArray<BuiltInScope>>;

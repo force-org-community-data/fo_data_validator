@@ -20,6 +20,7 @@ import type {
     NumberOrExpr,
     Option,
     CostTarget,
+    ListRule,
     SlotOption,
     SlotSource,
     SlotUnitEffect,
@@ -76,6 +77,7 @@ const RECORD_KINDS = [
     'selectors',
     'slotOptions',
     'subChoices',
+    'listRules',
 ] as const satisfies ReadonlyArray<keyof FactionRecords>;
 
 const keys = (record?: object) => Object.keys(record ?? {});
@@ -375,60 +377,7 @@ class Validator {
             );
         }
 
-        for (const rule of Object.values(game.listRules ?? {})) {
-            const path = `listRules/${rule.id}`;
-            switch (rule.kind) {
-                case 'resourceCap':
-                    this.known(
-                        path,
-                        'resource',
-                        rule.resource,
-                        keys(game.resources)
-                    );
-                    this.selector(path, rule.units, scope);
-                    for (const t of rule.contingentTypes ?? [])
-                        this.known(path, 'group type', t, groupTypes);
-                    if ('value' in rule.max)
-                        this.numberOrExpr(
-                            `${path}/max`,
-                            rule.max.value,
-                            FIELD_SCOPES.list,
-                            vocabulary
-                        );
-                    break;
-                case 'count': {
-                    this.selector(path, rule.units, scope);
-                    for (const t of rule.groupTypes ?? [])
-                        this.known(path, 'group type', t, groupTypes);
-                    const scopes: Array<BuiltInScope> =
-                        rule.scope === 'list'
-                            ? ['main', 'list']
-                            : [rule.scope, 'root', 'main', 'list'];
-                    this.numberOrExpr(
-                        `${path}/min`,
-                        rule.min,
-                        scopes,
-                        vocabulary
-                    );
-                    this.numberOrExpr(
-                        `${path}/max`,
-                        rule.max,
-                        scopes,
-                        vocabulary
-                    );
-                    break;
-                }
-                case 'expression':
-                    this.condition(
-                        path,
-                        rule.when,
-                        FIELD_SCOPES.list,
-                        vocabulary,
-                        'list-rule'
-                    );
-                    break;
-            }
-        }
+        this.listRules(game.listRules, scope);
 
         // contingent resources: roles grant them, group types cost them
         for (const role of Object.values(game.roles))
@@ -496,6 +445,7 @@ class Validator {
             'selectors',
             'slotOptions',
             'subChoices',
+            'listRules',
         ] as const) {
             for (const id of keys(faction[kind])) {
                 if (id in (game[kind] ?? {}))
@@ -716,6 +666,7 @@ class Validator {
         this.detachments('detachments', r.detachments, scope);
         this.specialRules('specialRules', r.specialRules, scope);
         this.slotOptions('slotOptions', r.slotOptions, scope);
+        this.listRules(r.listRules, scope);
         for (const selector of Object.values(r.selectors ?? {}))
             this.selector(`selectors/${selector.id}`, selector.match, scope);
         this.subChoices(r.subChoices, scope);
@@ -915,6 +866,62 @@ class Validator {
                 );
             baseModels +=
                 min * counts.reduce((sum, [, count]) => sum + count, 0);
+        }
+        // `replaces`: the replacer's models take the place of the target's
+        const taken = new Map<string, { min: number; max: number }>();
+        for (const block of blocks) {
+            if (!block.replaces) continue;
+            const at = `${path}/${block.id}/replaces`;
+            const { block: targetId, profile } = block.replaces;
+            const target = blocks.find((b) => b.id === targetId);
+            if (!target) {
+                this.report(at, `unknown block '${targetId}'`);
+                continue;
+            }
+            if (target.id === block.id)
+                this.report(at, 'a block cannot replace its own models');
+            else if (target.replaces)
+                this.report(
+                    at,
+                    `block '${targetId}' itself replaces another block's models; chain the replacement from the block that holds the models`
+                );
+            const held = target.profiles[profile];
+            if (held === undefined) {
+                this.report(
+                    at,
+                    `block '${targetId}' has no profile '${profile}'`
+                );
+                continue;
+            }
+            const size = Object.values(block.profiles).reduce(
+                (sum, count) => sum + count,
+                0
+            );
+            const min = block.min ?? 1;
+            const max = block.max ?? min;
+            const key = `${targetId}/${profile}`;
+            const soFar = taken.get(key) ?? { min: 0, max: 0 };
+            taken.set(key, {
+                min: soFar.min + min * size,
+                max: soFar.max + max * size,
+            });
+            baseModels -= min * size;
+        }
+        for (const [key, { min, max }] of taken) {
+            const [targetId, profile] = key.split('/');
+            const target = blocks.find((b) => b.id === targetId)!;
+            const supply = (target.min ?? 1) * target.profiles[profile];
+            const at = `${path}/${targetId}`;
+            if (min > supply)
+                this.report(
+                    at,
+                    `blocks replacing '${profile}' take ${min} models at their min, but '${targetId}' holds only ${supply} at its min`
+                );
+            else if (max > supply)
+                this.report(
+                    at,
+                    `blocks replacing '${profile}' can take ${max} models, but '${targetId}' holds only ${supply} at its min`
+                );
         }
         if (baseModels !== unit.modelCount)
             this.report(
@@ -1387,6 +1394,78 @@ class Validator {
         }
     }
 
+    /* typed and expression list rules, in the game or a faction or sub-faction */
+    private listRules(
+        rules: Record<string, ListRule> | undefined,
+        scope: Scope
+    ) {
+        const { game, vocabulary } = scope;
+        const groupTypes = keys(game.groupTypes);
+        for (const rule of Object.values(rules ?? {})) {
+            const path = `listRules/${rule.id}`;
+            switch (rule.kind) {
+                case 'resourceCap':
+                    this.known(
+                        path,
+                        'resource',
+                        rule.resource,
+                        keys(game.resources)
+                    );
+                    this.selector(path, rule.units, scope);
+                    for (const t of rule.contingentTypes ?? [])
+                        this.known(path, 'group type', t, groupTypes);
+                    if ('value' in rule.max)
+                        this.numberOrExpr(
+                            `${path}/max`,
+                            rule.max.value,
+                            FIELD_SCOPES.list,
+                            vocabulary
+                        );
+                    break;
+                case 'count': {
+                    this.selector(path, rule.units, scope);
+                    for (const t of rule.groupTypes ?? [])
+                        this.known(path, 'group type', t, groupTypes);
+                    const scopes: Array<BuiltInScope> =
+                        rule.scope === 'list'
+                            ? ['main', 'list']
+                            : [rule.scope, 'root', 'main', 'list'];
+                    this.numberOrExpr(
+                        `${path}/min`,
+                        rule.min,
+                        scopes,
+                        vocabulary
+                    );
+                    this.numberOrExpr(
+                        `${path}/max`,
+                        rule.max,
+                        scopes,
+                        vocabulary
+                    );
+                    break;
+                }
+                case 'expression':
+                    if (rule.scope !== 'group' && rule.groupTypes)
+                        this.report(
+                            path,
+                            'groupTypes only applies to a rule with scope "group"'
+                        );
+                    for (const t of rule.groupTypes ?? [])
+                        this.known(path, 'group type', t, groupTypes);
+                    this.condition(
+                        path,
+                        rule.when,
+                        rule.scope === 'group'
+                            ? FIELD_SCOPES.groupRule
+                            : FIELD_SCOPES.list,
+                        vocabulary,
+                        rule.scope === 'group' ? undefined : 'list-rule'
+                    );
+                    break;
+            }
+        }
+    }
+
     private slotOptions(
         path: string,
         options: Record<string, SlotOption> | undefined,
@@ -1402,6 +1481,7 @@ class Validator {
                 keys(scope.game.slotTags)
             );
             option.slotRoles?.forEach((r) => this.known(at, 'role', r, roles));
+            this.selector(`${at}/units`, option.units, scope);
             if (option.cost)
                 this.costs(
                     `${at}/cost`,

@@ -143,16 +143,16 @@ The game declares unit and weapon templates; each profile names its template and
 ```
 
 - **Choices** are list-wide options (stance, battle size, game mode), read in expressions with `choice(stance) == defensive`.
-- **List rules** are typed:
+- **List rules** (validator 1.4.0: factions and sub-factions may hold them too, applying to contingents using that faction or a sub-faction the contingent took; a sub-faction replaces a parent's by listing it in `overrides` with `"kind": "listRules"`) are typed:
     - `resourceCap`: percentage or absolute caps, e.g. heavy units 25%, allies 50%;
     - `count`: min/max matching units or groups per group, contingent or list; `max` may be an expression;
-    - `expression`: escape hatch, a condition with a message.
+    - `expression`: escape hatch, a condition with a message. With `scope: "group"` (and optional `groupTypes`) it is checked once for each group with `group`, `contingent`, `root`, `main` and `list` available, and the message is reported for each group that fails. Rules only flag the list; they never prevent anything.
 
 ### 3.8 Slot options and contingent resources
 
 Behaviour that once needed a TypeScript "mechanic" is plain data built from two general pieces, so the engine holds no game's rules and the Data Editor edits them like any record.
 
-**Slot options** (`slotOptions` records in the game, factions and sub-factions) are choices a slot with a tag offers, one per tag, e.g. special benefits or enhancements. Each names its `slotTag`, may limit itself to slots of some roles (`slotRoles`), may cost something (`cost`, added to the unit in the slot) and has `effects`: stat changes and special rules on the unit's profiles, an extra slot in the group (`slot`, with role choices and optionally `units`, a `source` and `effects`, §7.1), or other roles allowed into the slot (`allowedRoles`). The tag's `optionLabel` names them in the UI ("Prime Option"). A list slot records the picks as `slotOptions: { [tag]: { option, role? } }`.
+**Slot options** (`slotOptions` records in the game, factions and sub-factions) are choices a slot with a tag offers, one per tag, e.g. special benefits or enhancements. Each names its `slotTag`, may limit itself to slots of some roles (`slotRoles`) and, from validator 1.4.0, to units matching a selector (`units`, matched as the unit stands before slot-option effects, so a trait from an option or the detachment counts), may cost something (`cost`, added to the unit in the slot) and has `effects`: stat changes and special rules on the unit's profiles, an extra slot in the group (`slot`, with role choices and optionally `units`, a `source` and `effects`, §7.1), or other roles allowed into the slot (`allowedRoles`). The tag's `optionLabel` names them in the UI ("Prime Option"). A list slot records the picks as `slotOptions: { [tag]: { option, role? } }`.
 
 **Contingent resources** (`scope: "contingent"`, §3.5) are granted and spent within each contingent:
 
@@ -285,6 +285,11 @@ What the app derives from them:
 - the extra cost: Σ (copies − `min`) × the block's `cost`;
 - `perModel` default wargear: one per model of each profile not excluded (only of `profileId`'s profile when given);
 - per-model upgrades (`every`, `some`, `one-in-x`, `max`): counted from the live counts, of the upgrade's `profileId` profile when it has one.
+
+**Replacing models** (validator 1.4.0). A block may carry `replaces: { block, profile }`: each copy takes the place of models of `profile` in `block` instead of adding models, e.g. "one Thallax may be upgraded to a Praetorian for +10 points" (`examples/full`'s `sapper-team`). A copy replaces as many models of `profile` as it holds itself.
+
+- The live count of `profile` falls by that many per copy and the replacer's profiles rise by the same, so `unit.models()` and the target's cost are unchanged; the replacer's `cost` is charged per copy above its `min` as for any block.
+- Checks: `block` is another block of the unit and holds `profile`; a block that replaces others isn't itself replaced; the models replaced never exceed what the target holds at its `min` (at the replacers' `min`, and at their `max`); `modelCount` is Σ `min` × models per copy, less Σ replacer `min` × models replaced.
 
 A saved list's unit records `composition: { [blockId]: copies }` instead of `additionalModels`. Units without `composition` behave as before; their profile counts stay unknown.
 
