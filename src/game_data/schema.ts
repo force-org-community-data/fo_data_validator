@@ -452,9 +452,21 @@ export const ExpressionListRuleSchema = z
     .strictObject({
         kind: z.literal('expression'),
         id: SlugSchema,
+        scope: z
+            .enum(['list', 'group'])
+            .optional()
+            .describe(
+                '`list` (default): the condition is checked once for the whole list. `group`: checked once for each group (of the listed `groupTypes`, or any) with `group`, `contingent`, `root`, `main` and `list` available; the message is reported for each group that fails'
+            ),
+        groupTypes: z
+            .array(SlugSchema)
+            .optional()
+            .describe('with `scope: "group"`: only groups of these types'),
         when: ConditionSchema,
     })
-    .describe('Escape hatch for list rules no typed form covers');
+    .describe(
+        'Escape hatch for list rules no typed form covers. A rule only flags the list; it never prevents anything'
+    );
 
 export const ListRuleSchema = z.discriminatedUnion('kind', [
     ResourceCapRuleSchema,
@@ -716,6 +728,17 @@ export const CompositionBlockSchema = z
         cost: CostsSchema.optional().describe(
             'what each copy above `min` costs; needed when `max` is more than `min`'
         ),
+        replaces: z
+            .strictObject({
+                block: SlugSchema.describe('the block whose models it replaces'),
+                profile: SlugSchema.describe(
+                    "the profile in that block each copy takes the place of; one model of it per model in the copy"
+                ),
+            })
+            .optional()
+            .describe(
+                "each copy takes the place of models of `profile` in `block` instead of adding models, e.g. one Thallax upgraded to a Praetorian: the unit's size stays the same and the profile's count moves to this block's profiles"
+            ),
     })
     .describe(
         'A set of models bought together: the unit holds between `min` and `max` copies of it, e.g. a Gun Crew of one Gunner and one Loader'
@@ -920,6 +943,9 @@ export const SlotOptionSchema = z
             .describe(
                 'only offered on slots of these roles; left out = any role'
             ),
+        units: UnitSelectorOrRefSchema.optional().describe(
+            "only offered on slots whose unit matches, seen as it stands before slot-option effects (its traits from option and detachment effects included), e.g. `{ \"traits\": [\"Macrotek\"] }` for an option only Macrotek units may take; left out = any unit"
+        ),
         cost: CostsSchema.optional().describe(
             'added to the cost of the unit in the slot'
         ),
@@ -1003,6 +1029,7 @@ export const FACTION_RECORD_KINDS = [
     'selectors',
     'slotOptions',
     'subChoices',
+    'listRules',
 ] as const;
 
 const factionRecords = {
@@ -1015,6 +1042,12 @@ const factionRecords = {
     selectors: z.record(SlugSchema, NamedSelectorSchema).optional(),
     slotOptions: z.record(SlugSchema, SlotOptionSchema).optional(),
     subChoices: z.record(SlugSchema, SubChoiceSchema).optional(),
+    listRules: z
+        .record(SlugSchema, ListRuleSchema)
+        .optional()
+        .describe(
+            "list rules that apply to contingents using this faction (or sub-faction), e.g. a rule about this faction's own traits"
+        ),
 };
 
 export const FactionRecordsSchema = z.strictObject(factionRecords);

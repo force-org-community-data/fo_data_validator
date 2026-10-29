@@ -429,3 +429,148 @@ describe('slots filled from another faction', () => {
         assert.deepEqual(issues, []);
     });
 });
+
+describe('composition blocks that replace models', () => {
+    const sapperTeam = (set: GameDataSet) =>
+        set.factions[0].data.units['sapper-team'];
+
+    it('accepts a replacement that keeps the unit its size', async () => {
+        assert.deepEqual(await issuesAfter(() => {}), []);
+    });
+
+    it('checks the target block and profile', async () => {
+        const issues = await issuesAfter((set) => {
+            const [sapper, foreman] = sapperTeam(set).composition!;
+            foreman.replaces = { block: 'sappers', profile: 'sapper' };
+            sapper.id = 'sapper';
+        });
+        assert.deepEqual(issues, [
+            "error factions/field-army.json units/sapper-team/composition/foreman/replaces: unknown block 'sappers'",
+        ]);
+
+        const profile = await issuesAfter((set) => {
+            sapperTeam(set).composition![1].replaces!.profile = 'foreman';
+        });
+        assert.deepEqual(profile, [
+            "error factions/field-army.json units/sapper-team/composition/foreman/replaces: block 'sapper' has no profile 'foreman'",
+        ]);
+    });
+
+    it('does not let blocks replace more models than the target holds', async () => {
+        const issues = await issuesAfter((set) => {
+            sapperTeam(set).composition![1].max = 5;
+        });
+        assert.deepEqual(issues, [
+            "error factions/field-army.json units/sapper-team/composition/sapper: blocks replacing 'sapper' can take 5 models, but 'sapper' holds only 4 at its min",
+        ]);
+    });
+
+    it('counts a compulsory replacement in the model count', async () => {
+        const issues = await issuesAfter((set) => {
+            const unit = sapperTeam(set);
+            unit.composition![1].min = 1;
+        });
+        assert.deepEqual(issues, []);
+
+        const wrong = await issuesAfter((set) => {
+            const unit = sapperTeam(set);
+            unit.composition![1].min = 1;
+            unit.modelCount = 5;
+        });
+        assert.deepEqual(wrong, [
+            "error factions/field-army.json units/sapper-team/modelCount: modelCount is 5, but the composition's blocks at their min hold 4 models",
+        ]);
+    });
+
+    it('does not chain replacements', async () => {
+        const issues = await issuesAfter((set) => {
+            const unit = sapperTeam(set);
+            unit.composition!.push({
+                id: 'champion',
+                profiles: { sapper: 1 },
+                min: 0,
+                max: 1,
+                cost: { points: 5 },
+                replaces: { block: 'foreman', profile: 'foreman' },
+            });
+        });
+        assert.ok(
+            issues.some((i) =>
+                i.includes("block 'foreman' itself replaces another block's models")
+            )
+        );
+    });
+});
+
+describe('slot option units', () => {
+    it('checks the selector', async () => {
+        const issues = await issuesAfter((set) => {
+            set.game.data.slotOptions!['veteran-officer'].units = {
+                roles: ['offcer'],
+            };
+        });
+        assert.deepEqual(issues, [
+            "error game.json slotOptions/veteran-officer/units: unknown role 'offcer'",
+        ]);
+    });
+});
+
+describe('faction and sub-faction list rules', () => {
+    const rules = (set: GameDataSet) => set.factions[0].data.listRules!;
+
+    it('checks a group-scope condition with the group scope available', async () => {
+        const issues = await issuesAfter((set) => {
+            const rule = rules(set)['vehicles-in-reserve'];
+            if (rule.kind === 'expression') rule.groupTypes = ['reserv'];
+        });
+        assert.deepEqual(issues, [
+            "error factions/field-army.json listRules/vehicles-in-reserve: unknown group type 'reserv'",
+        ]);
+    });
+
+    it('does not allow the group scope in a list-scope rule', async () => {
+        const issues = await issuesAfter((set) => {
+            const rule = rules(set)['vehicles-in-reserve'];
+            if (rule.kind === 'expression') delete rule.scope;
+        });
+        assert.deepEqual(
+            [...new Set(issues.map((i) => i.split(': ').slice(1).join(': ')))].sort(),
+            [
+                "'group' isn't available here (allowed: list, main)",
+                'groupTypes only applies to a rule with scope "group"',
+            ]
+        );
+    });
+
+    it('warns when a faction rule hides the game rule of the same id', async () => {
+        const issues = await issuesAfter((set) => {
+            rules(set)['heavy-cap'] = set.game.data.listRules!['heavy-cap'];
+        });
+        assert.deepEqual(issues, [
+            "warning factions/field-army.json listRules/heavy-cap: hides the game's listRules 'heavy-cap'",
+        ]);
+    });
+
+    it('needs a declared override to replace a faction rule', async () => {
+        const issues = await issuesAfter((set) => {
+            sub(set, 'veterans').listRules = {
+                'vehicles-in-reserve': rules(set)['vehicles-in-reserve'],
+            };
+        });
+        assert.deepEqual(issues, [
+            "error sub-factions/veterans.json listRules/vehicles-in-reserve: collides with the parent's listRules 'vehicles-in-reserve'; list it in overrides if that's intended",
+        ]);
+
+        const allowed = await issuesAfter((set) => {
+            const veterans = sub(set, 'veterans');
+            veterans.listRules = {
+                'vehicles-in-reserve': rules(set)['vehicles-in-reserve'],
+            };
+            veterans.overrides!.push({
+                kind: 'listRules',
+                id: 'vehicles-in-reserve',
+            });
+        });
+        assert.deepEqual(allowed, []);
+    });
+});

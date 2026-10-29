@@ -158,6 +158,7 @@ A field sees its own subject and everything containing it.
 | Trait effect `when` | as a stat effect's, without `profile` |
 | Special rule `grants` | `rule`, `unit`, `slot`, `group`, `contingent`, `root`, `main`, `list` |
 | Sub-faction `when`, sub-faction group `min` / `max` | `contingent`, `root`, `main`, `list`: the contingent the sub-faction is taken for |
+| Expression list rule with `scope: "group"` | `group`, `contingent`, `root`, `main`, `list` |
 | Group type `min` / `max`, list rules | `main`, `list` (a `count` list rule with `scope: contingent` or `group` also sees that scope, `root`, `main` and `list`) |
 
 Using another scope is a load error: "'unit' isn't available here (allowed: contingent, group, list, root)".

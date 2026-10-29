@@ -154,6 +154,17 @@
             }
         }
     },
+    "listRules": {
+        "veterans-reserve-limit": {
+            "id": "veterans-reserve-limit",
+            "kind": "expression",
+            "scope": "group",
+            "when": {
+                "if": "not group.is(type:reserve) or group.count(role:troop) <= 3",
+                "message": "A Veterans Reserve Formation holds at most three Troop units"
+            }
+        }
+    },
     "unitModifiers": {
         "sergeants-master-crafted": {
             "id": "sergeants-master-crafted",

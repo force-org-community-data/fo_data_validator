@@ -1,6 +1,6 @@
 {
     "name": "@force-org/data-validator",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "Data schema, checker and expression language for Force Org data sources",
     "license": "UNLICENSED",
     "private": false,

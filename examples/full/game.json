@@ -332,6 +332,7 @@
             "text": "The model in this slot gains +1 Morale.",
             "slotTag": "prime",
             "slotRoles": ["officer"],
+            "units": { "traits": ["Field Army"] },
             "effects": [
                 {
                     "kind": "stat",

@@ -94,7 +94,9 @@ Required: `id`, `version`, `name`, `roles`, `unitTypes`, `groupTypes`, `resource
 
 - `resourceCap`: `{ "kind": "resourceCap", "id", "resource": "points", "units"?: <selector>, "contingentTypes"?: [...], "max": { "percentOfLimit": 25, "round": "up" } | { "value": 500 }, "message" }`
 - `count`: `{ "kind": "count", "id", "units"?: <selector>, "groupTypes"?: [...], "scope": "group" | "contingent" | "list", "min"?, "max"?, "message" }`
-- `expression`: `{ "kind": "expression", "id", "when": { "if", "message" } }`
+- `expression`: `{ "kind": "expression", "id", "scope"?: "list" | "group", "groupTypes"?: [...], "when": { "if", "message" } }`. With `"scope": "group"` (validator 1.4.0+) the condition is checked once for each group (only those of `groupTypes`, if given) with `group`, `contingent`, `root`, `main` and `list` available, and the message is reported for each group that fails. A rule only flags the list; it never prevents anything.
+
+A faction or sub-faction may hold `listRules` too (validator 1.4.0+), applying to contingents using that faction or a sub-faction the contingent took. A sub-faction replaces a parent's rule by listing it in `overrides` with `"kind": "listRules"`.
 
 ## 5. The faction file (`Faction`)
 
@@ -162,6 +164,17 @@ Required: `id`, `version`, `name`, `game: { "id", "versions" }` and all of `unit
 - `modelCount` is still required and must equal the blocks at their `min` (Σ `min` × models per copy), so older apps still read the unit. Don't use `additionalModels` alongside `composition`.
 - The app counts each profile's models from the copies taken, which drives `unit.models()`, `perModel` default wargear, and per-model upgrades. A `perModel` upgrade with a `profileId` counts only that profile's models, so "each Loader may exchange…" is `"profileId": "loader", "perModel": { "type": "some" }`.
 - Needs validator 1.2.0+ and an app that supports composition blocks.
+- **`replaces`** (validator 1.4.0+): a block may take the place of models in another block instead of adding models, e.g. "one Thallax may be upgraded to a Praetorian for +10 points":
+
+    ```json
+    "composition": [
+        { "id": "thallax", "profiles": { "thallax": 1 }, "min": 6, "max": 9, "cost": { "points": 20 } },
+        { "id": "praetorian", "profiles": { "praetorian": 1 }, "min": 0, "max": 1, "cost": { "points": 10 },
+          "replaces": { "block": "thallax", "profile": "thallax" } }
+    ]
+    ```
+
+    Each copy of the replacing block takes as many models of `profile` off the target block as it holds itself, so the unit's size and the target's cost stay the same and only the profile counts move (5 Thallax and 1 Praetorian). The replacer's `max` can't exceed what the target holds at its `min`, and `modelCount` is Σ `min` × models per copy, less the models replaced at the replacer's `min`. A replacing block can't itself be replaced.
 
 ### Weapons, equipment, special rules
 
@@ -277,7 +290,7 @@ A **UnitSelector** picks units: `{ "unitIds": [...], "roles": [...], "traits": [
 
 ### Slot options (benefits for tagged slots)
 
-`slotOptions`: `{ "id", "name", "text", "slotTag", "slotRoles"?, "cost"?, "effects"? }`. A slot with the tag offers one option; effects are stat/special-rule effects, plus at most one `{ "kind": "slot", "roleChoices": [...] }` (an extra slot, which may take `units`, a `source` and `effects`) and one `{ "kind": "allowedRoles", "roles": [...] }`.
+`slotOptions`: `{ "id", "name", "text", "slotTag", "slotRoles"?, "units"?, "cost"?, "effects"? }`. A slot with the tag offers one option; `units` (a selector, validator 1.4.0+) limits it to slots whose unit matches, seen before slot-option effects, e.g. `{ "traits": ["Macrotek"] }`; effects are stat/special-rule effects, plus at most one `{ "kind": "slot", "roleChoices": [...] }` (an extra slot, which may take `units`, a `source` and `effects`) and one `{ "kind": "allowedRoles", "roles": [...] }`.
 
 ## 6. The sub-faction file (`SubFaction`)
 
