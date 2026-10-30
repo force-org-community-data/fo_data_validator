@@ -177,10 +177,7 @@ export const SpecialRuleEffectSchema = z.strictObject({
 export const TraitEffectSchema = z
     .strictObject({
         kind: z.literal('trait'),
-        add: z
-            .array(z.string())
-            .optional()
-            .describe('traits the unit gains'),
+        add: z.array(z.string()).optional().describe('traits the unit gains'),
         remove: z
             .array(z.string())
             .optional()
@@ -653,6 +650,15 @@ const upgradeShape = {
 
 export const UpgradeSchema = z.strictObject({
     ...upgradeShape,
+    swapFrom: z
+        .strictObject({
+            ...WargearRefSchema.shape,
+            count: z.number().optional(),
+        })
+        .optional()
+        .describe(
+            "each pick of any option takes `count` (default 1) of this wargear off the upgrade's profile (or the unit at large), up to what is held, besides giving the option's own wargear; covers options reached through a reference too, except options with their own `swaps`; not applied to the `default` option"
+        ),
     options: z
         .record(SlugSchema, z.union([OptionSchema, UpgradeReferenceSchema]))
         .describe(
@@ -726,7 +732,9 @@ export const CompositionBlockSchema = z
         min: z
             .number()
             .optional()
-            .describe('copies in the unit as bought for its `cost`; left out = 1'),
+            .describe(
+                'copies in the unit as bought for its `cost`; left out = 1'
+            ),
         max: z
             .number()
             .optional()
@@ -736,9 +744,11 @@ export const CompositionBlockSchema = z
         ),
         replaces: z
             .strictObject({
-                block: SlugSchema.describe('the block whose models it replaces'),
+                block: SlugSchema.describe(
+                    'the block whose models it replaces'
+                ),
                 profile: SlugSchema.describe(
-                    "the profile in that block each copy takes the place of; one model of it per model in the copy"
+                    'the profile in that block each copy takes the place of; one model of it per model in the copy'
                 ),
             })
             .optional()
@@ -786,7 +796,7 @@ export const UnitSchema = z.strictObject({
         .array(z.string())
         .optional()
         .describe(
-            'the unit\'s traits (e.g. a faction trait), matched by `trait:` references and selector `traits` as case-insensitive text; effects may add or remove some'
+            "the unit's traits (e.g. a faction trait), matched by `trait:` references and selector `traits` as case-insensitive text; effects may add or remove some"
         ),
     when: ConditionSchema.optional().describe('when the unit may be taken'),
     limit: z
@@ -950,7 +960,7 @@ export const SlotOptionSchema = z
                 'only offered on slots of these roles; left out = any role'
             ),
         units: UnitSelectorOrRefSchema.optional().describe(
-            "only offered on slots whose unit matches, seen as it stands before slot-option effects (its traits from option and detachment effects included), e.g. `{ \"traits\": [\"Macrotek\"] }` for an option only Macrotek units may take; left out = any unit"
+            'only offered on slots whose unit matches, seen as it stands before slot-option effects (its traits from option and detachment effects included), e.g. `{ "traits": ["Macrotek"] }` for an option only Macrotek units may take; left out = any unit'
         ),
         cost: CostsSchema.optional().describe(
             'added to the cost of the unit in the slot'
@@ -1090,7 +1100,7 @@ export const FactionSchema = z.strictObject({
         .record(SlugSchema, SubFactionGroupSchema)
         .optional()
         .describe(
-            "the independent sub-faction picks a contingent of this faction makes; sub-factions name theirs in `group`. Sub-factions without a `group` are in the `default` group (max 1), which may be declared here to name it or change its limits"
+            'the independent sub-faction picks a contingent of this faction makes; sub-factions name theirs in `group`. Sub-factions without a `group` are in the `default` group (max 1), which may be declared here to name it or change its limits'
         ),
 });
 

@@ -134,7 +134,10 @@ describe('validator', () => {
 /* the full source with the extension, changed by `change`, and what the validator says */
 async function issuesAfter(change: (set: GameDataSet) => void) {
     const [set] = structuredClone(
-        await sets(path.join(examples, 'full'), path.join(examples, 'extension'))
+        await sets(
+            path.join(examples, 'full'),
+            path.join(examples, 'extension')
+        )
     );
     change(set);
     return validateGameData(set).map(
@@ -180,9 +183,8 @@ describe('grouped sub-factions', () => {
 
     it('reports different records in sub-factions taken together', async () => {
         const issues = await issuesAfter((set) => {
-            sub(set, 'coastal-heritage').specialRules![
-                'local-knowledge'
-            ].text = 'Something else.';
+            sub(set, 'coastal-heritage').specialRules!['local-knowledge'].text =
+                'Something else.';
             sub(set, 'siege-doctrine').unitModifiers = {
                 tough: {
                     id: 'tough',
@@ -260,7 +262,7 @@ describe('unit composition', () => {
             'error factions/field-army.json units/gun-team/composition/gun-crew/profiles/loadr: a block holds a whole number of models of each profile, at least 1 (got 1.5)',
             "error factions/field-army.json units/gun-team/composition/spotter: profile 'gunner' is also in block 'gun-crew'; a profile may be in only one block",
             'error factions/field-army.json units/gun-team/composition/spotter: min 2 is more than max 1',
-            'error factions/field-army.json units/gun-team/modelCount: modelCount is 2, but the composition\'s blocks at their min hold 4.5 models',
+            "error factions/field-army.json units/gun-team/modelCount: modelCount is 2, but the composition's blocks at their min hold 4.5 models",
             "warning factions/field-army.json units/gun-team/composition: profile 'loader' is in no block, so no model uses it",
         ]);
     });
@@ -496,7 +498,9 @@ describe('composition blocks that replace models', () => {
         });
         assert.ok(
             issues.some((i) =>
-                i.includes("block 'foreman' itself replaces another block's models")
+                i.includes(
+                    "block 'foreman' itself replaces another block's models"
+                )
             )
         );
     });
@@ -534,7 +538,11 @@ describe('faction and sub-faction list rules', () => {
             if (rule.kind === 'expression') delete rule.scope;
         });
         assert.deepEqual(
-            [...new Set(issues.map((i) => i.split(': ').slice(1).join(': ')))].sort(),
+            [
+                ...new Set(
+                    issues.map((i) => i.split(': ').slice(1).join(': '))
+                ),
+            ].sort(),
             [
                 "'group' isn't available here (allowed: list, main)",
                 'groupTypes only applies to a rule with scope "group"',
@@ -572,5 +580,46 @@ describe('faction and sub-faction list rules', () => {
             });
         });
         assert.deepEqual(allowed, []);
+    });
+});
+
+describe('upgrade swapFrom', () => {
+    const sidearm = (set: GameDataSet) =>
+        set.factions[0].data.units['squad'].upgrades!['trooper-sidearm'];
+
+    it('accepts the example, which swaps the trooper rifle for a shared list', async () => {
+        assert.deepEqual(await issuesAfter(() => {}), []);
+    });
+
+    it('reports unknown wargear and a non-positive count', async () => {
+        const issues = await issuesAfter((set) => {
+            sidearm(set).swapFrom = { kind: 'weapon', id: 'rifel', count: 0 };
+        });
+        assert.ok(
+            issues.some((i) => i.endsWith("swapFrom: unknown weapon 'rifel'"))
+        );
+        assert.ok(
+            issues.some((i) =>
+                i.endsWith('swapFrom: count must be a positive number')
+            )
+        );
+    });
+
+    it('warns when the unit does not hold the wargear', async () => {
+        const issues = await issuesAfter((set) => {
+            sidearm(set).swapFrom = { kind: 'weapon', id: 'cannon' };
+        });
+        assert.deepEqual(issues, [
+            "warning factions/field-army.json units/squad/upgrades/trooper-sidearm/swapFrom: the unit doesn't hold weapon 'cannon' by default on 'trooper', so there is nothing to take off",
+        ]);
+    });
+
+    it('warns when the only option is the default', async () => {
+        const issues = await issuesAfter((set) => {
+            sidearm(set).options = { none: sidearm(set).options['none'] };
+        });
+        assert.deepEqual(issues, [
+            'warning factions/field-army.json units/squad/upgrades/trooper-sidearm/swapFrom: every option is the default, so nothing is ever swapped',
+        ]);
     });
 });
