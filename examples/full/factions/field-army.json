@@ -154,6 +154,22 @@
                         }
                     }
                 },
+                "trooper-sidearm": {
+                    "id": "trooper-sidearm",
+                    "name": "Trooper sidearm",
+                    "profileId": "trooper",
+                    "default": "none",
+                    "perModel": { "type": "one-in-x", "everyX": 5 },
+                    "swapFrom": { "kind": "weapon", "id": "rifle" },
+                    "options": {
+                        "none": {
+                            "id": "none",
+                            "name": "None",
+                            "cost": { "points": 0 }
+                        },
+                        "sidearms": { "id": "sidearms", "target": "sidearms" }
+                    }
+                },
                 "squad-options": {
                     "id": "squad-options",
                     "name": "Squad options",
@@ -594,6 +610,25 @@
         }
     },
     "upgrades": {
+        "sidearms": {
+            "id": "sidearms",
+            "name": "Sidearms",
+            "perModel": { "type": "single" },
+            "options": {
+                "knife": {
+                    "id": "knife",
+                    "name": "Knife",
+                    "cost": { "points": 2 },
+                    "weaponRefs": ["knife"]
+                },
+                "axe": {
+                    "id": "axe",
+                    "name": "Axe",
+                    "cost": { "points": 5 },
+                    "weaponRefs": ["axe"]
+                }
+            }
+        },
         "banner": {
             "id": "banner",
             "name": "Banner",

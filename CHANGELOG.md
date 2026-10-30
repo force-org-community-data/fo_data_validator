@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Upgrade `swapFrom`.** A unit upgrade may have `swapFrom: { kind, id, count? }` (count defaults to 1): each pick of any of its options, including options pulled in by an UpgradeReference to a shared faction upgrade, takes that much of the wargear off the upgrade's profile (or the unit at large), up to what is held, besides giving the option's own wargear. Options with their own `swaps` keep them instead; the `default` option is not affected. New checks: the wargear exists, `count` is positive, and warnings when every option is the default or the unit holds no such wargear by default. `schemaVersion` stays 1; additive.
+
 ## 1.5.0
 
 - **Slot tag look.** A `slotTags` entry may have `color` and `icon`, names from the app's fixed palette and icon set (colours `amber`, `red`, `orange`, `green`, `teal`, `blue`, `violet`, `pink`, `slate`; icons `star`, `spark`, `diamond`, `hex`, `cross`, `flag`, `swords`, `crown`, `fleur`, `circle`, `triangle`, `square`, `target`, `bolt`). The app marks the tag's slots with them; left out or unknown, it picks a look from the tag's id. The names aren't checked here, so the app can add to its lists without a release.

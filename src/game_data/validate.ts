@@ -204,14 +204,7 @@ class Validator {
         const at = path ? `${path}/when` : 'when';
         if (!condition.message?.trim())
             this.report(at, 'a condition needs a message for players');
-        this.expression(
-            at,
-            condition.if,
-            scopes,
-            'boolean',
-            vocabulary,
-            lint
-        );
+        this.expression(at, condition.if, scopes, 'boolean', vocabulary, lint);
     }
 
     /* ---------------------------------------------------------------- */
@@ -529,8 +522,14 @@ class Validator {
                     aGroup.id === bGroup.id
                         ? `group '${aGroup.id}' allows more than one`
                         : `they're in groups '${aGroup.id}' and '${bGroup.id}'`;
-                for (const kind of [...RECORD_KINDS, 'unitModifiers'] as const) {
-                    const mine = (b.data[kind] ?? {}) as Record<string, unknown>;
+                for (const kind of [
+                    ...RECORD_KINDS,
+                    'unitModifiers',
+                ] as const) {
+                    const mine = (b.data[kind] ?? {}) as Record<
+                        string,
+                        unknown
+                    >;
                     const theirs = (a.data[kind] ?? {}) as Record<
                         string,
                         unknown
@@ -790,6 +789,7 @@ class Validator {
                 ? ['profile', ...FIELD_SCOPES.upgrade]
                 : [...FIELD_SCOPES.upgrade];
             this.upgrade(at, upgrade, scope, scopes);
+            this.swapFrom(at, upgrade, unit, scope);
         }
         this.ids(`${path}/upgrades`, unit.upgrades);
 
@@ -850,7 +850,8 @@ class Validator {
                 this.report(at, `min must be a whole number (got ${min})`);
             if (!whole(max, 0))
                 this.report(at, `max must be a whole number (got ${max})`);
-            if (max < min) this.report(at, `min ${min} is more than max ${max}`);
+            if (max < min)
+                this.report(at, `min ${min} is more than max ${max}`);
             if (max > min && !block.cost)
                 this.report(
                     at,
@@ -976,6 +977,58 @@ class Validator {
             }
         }
         return { offered, sharedClashes };
+    }
+
+    /*
+     * `swapFrom` names wargear every non-default pick takes off: it must exist,
+     * the count must be positive, there must be something to swap to, and the
+     * unit should hold it (a warning: the holder may come from a sub-faction).
+     */
+    private swapFrom(path: string, upgrade: Upgrade, unit: Unit, scope: Scope) {
+        const swap = upgrade.swapFrom;
+        if (!swap) return;
+        const at = `${path}/swapFrom`;
+        this.wargear(at, swap, scope);
+        if (swap.count !== undefined && !(swap.count > 0))
+            this.report(at, 'count must be a positive number');
+
+        const { offered } = this.resolveOptions(upgrade, scope);
+        if (!offered.some((id) => id !== upgrade.default))
+            this.report(
+                at,
+                'every option is the default, so nothing is ever swapped',
+                'warning'
+            );
+
+        const held = (ref: WargearRef, profileId?: string) =>
+            ref.kind === swap.kind &&
+            ref.id === swap.id &&
+            (!upgrade.profileId ||
+                !profileId ||
+                profileId === upgrade.profileId);
+        const holds =
+            (unit.defaultWargear ?? []).some((g) => held(g, g.profileId)) ||
+            Object.values(unit.upgrades ?? {}).some((u) => {
+                if (!u.default) return false;
+                const option = u.options[u.default];
+                if (!option || 'target' in option) return false;
+                const refs =
+                    swap.kind === 'weapon'
+                        ? option.weaponRefs
+                        : option.equipmentRefs;
+                return (
+                    !!refs?.includes(swap.id) &&
+                    (!upgrade.profileId ||
+                        !u.profileId ||
+                        u.profileId === upgrade.profileId)
+                );
+            });
+        if (!holds)
+            this.report(
+                at,
+                `the unit doesn't hold ${swap.kind} '${swap.id}' by default${upgrade.profileId ? ` on '${upgrade.profileId}'` : ''}, so there is nothing to take off`,
+                'warning'
+            );
     }
 
     private upgrade(
