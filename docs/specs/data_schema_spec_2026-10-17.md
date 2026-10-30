@@ -308,7 +308,16 @@ A trait effect (validator 1.2.0) changes a unit's `traits`: `add` gives traits, 
 
 A unit's upgrades hold options or references to faction upgrades, and may use `restrictions`, `replaces`, `limitBy`, `swaps` and `profileId`:
 
-- `perModel` has a type (`single`, `multiple`, `every`, `some`, `one-in-x`) and may use `excludeProfiles`.
+- `perModel` has a type and may use `max`, `everyX` and `excludeProfiles`. The type sets the upgrade's pick **cap** (picks counted by amount, shared by all its options):
+    - `single`: `perModel.max` if given, else the unit's model count. A plain `single` upgrade is one choice.
+    - `multiple`: `perModel.max` (default 1); the same option may be picked repeatedly.
+    - `every`: one per counted model, applied to all of them when picked.
+    - `some`: up to one per counted model; `perModel.max` is ignored.
+    - `one-in-x`: `floor(counted models / everyX)`; `everyX` is required.
+
+  Counted models respect `profileId` and `excludeProfiles`.
+- `multiSelect` (boolean, default false) lets an upgrade's options be held together (checkboxes). Without it `single` / `every` upgrades are a single choice; `multiple` / `some` upgrades hold several picks regardless. A multi-select upgrade at its cap drops its earliest pick for a new one; at a cap of 1 the options take turns.
+- Upgrade `min` / `max` are validated as expressions but **not enforced by the app** (they don't count picks or models); cap picks with `perModel` and `limitBy`. "Choose two, repeats allowed" is `perModel: { "type": "multiple", "max": 2 }` with `multiSelect: true`; a capped exchange adds `limitBy` on the wargear being swapped and `swaps` on the options.
 - **Shared option lists and clashes:** an upgrade can pull in a shared faction upgrade's options by reference (e.g. a universal "Officer Wargear" list). When an id appears more than once, the **upgrade's own option wins** over a shared one (a General's free Rifle, not the officer list's 5pt Rifle, which no player would take), and **between shared upgrades the one referenced first wins**, which the checker warns about since it's probably a mistake. The hidden options aren't offered; the Data Editor shows under each reference what it hides and why. Ids therefore stay plain (`rifle`), and editing a shared list can never break another unit's upgrade.
 - Option and unit **costs are resource maps**.
 - Upgrades may have `when`, `min`, `max`; options `when` and `max`.

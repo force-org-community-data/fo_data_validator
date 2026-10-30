@@ -201,13 +201,49 @@ A unit's `upgrades` is a record of `Upgrade`s; each holds `options`.
 }
 ```
 
-- `perModel.type`: `single` (once), `multiple` (any number of times), `every` (every model), `some` (any number of models), `one-in-x` (one per `everyX` models). `max` and `excludeProfiles` refine it.
+- `perModel.type`: `single` (once), `multiple` (any number of times), `every` (every model), `some` (any number of models), `one-in-x` (one per `everyX` models). `max` and `excludeProfiles` refine it. See "How picks are controlled" below.
 - An option gives wargear through `weaponRefs` / `equipmentRefs` (faction weapon/equipment ids). It may also have `swaps`, `subChoices`, `effects`, `when`, `max`.
 - `{ "id", "target" }` is an **UpgradeReference** to a faction-level upgrade in the faction's `upgrades`, so a shared wargear list is written once. When option ids clash, the upgrade's own option wins, then the first-referenced shared upgrade.
 - **Restrictions** (`restrictions: { "exclusions": [...], "required": [...], "requiredAnd": false }`) and `limitBy` point at wargear (`{ "kind": "weapon" | "equipment", "id" }`), not at options, so a rifle satisfies a requirement whichever slot it came from. Write an exclusion on one side only; it applies both ways.
 - `replaces`: sibling upgrades that a non-default pick takes the place of. `limitBy`: caps non-default picks at Σ `count` × the wargear held (zero held blocks it).
 - `profileId` puts the upgrade's wargear on that profile (for example the sergeant); left out, it belongs to the unit at large. `swaps: [{ "from": <wargear ref>, "to": <wargear ref> }]` replaces wargear that profile holds.
 - `subChoices` on an option lists ids of `SubChoice`s (defined once in the game or faction): a picker beside the option whose value may add to (`cost`) or multiply (`costMultiplier`) the option's cost.
+
+#### How picks are controlled
+
+Three settings decide how many options an upgrade holds at once and how they are shown. (Checked against the Force Org app's `selections.ts`, `restrictions.ts` and `viewers/upgrade.tsx`.)
+
+- **`perModel.type`** sets how many *picks* (units of an option) the upgrade can hold in total, its **cap**:
+
+    | `type` | cap | meaning |
+    |---|---|---|
+    | `single` | `perModel.max` if given, otherwise the unit's model count | one choice for the unit; with `multiSelect: true`, up to the cap in picks |
+    | `multiple` | `perModel.max` (1 if left out) | picks up to `max`, the same option more than once |
+    | `every` | models counted (`profileId`, `excludeProfiles` apply) | every model gets the option; picking one sets the amount to every model |
+    | `some` | models counted | any number of models, up to one pick per model. `perModel.max` is **not** read for `some`; limit it with `limitBy` |
+    | `one-in-x` | `floor(models / everyX)` | one pick per `everyX` models; `everyX` is required |
+
+- **`multiSelect`** (boolean) lets the options be held together, shown as checkboxes. Without it, `single` and `every` upgrades are a single choice; `multiple` and `some` upgrades already hold several picks, shown with amounts. A full multi-select upgrade drops its earliest pick to make room for a new one. If the cap is 1, the options just take turns, whatever `multiSelect` says.
+- **Upgrade `min` / `max`** (numbers or expressions) are checked as expressions, but **the app does not enforce them**: nothing counts picks or models against them. Cap picks with `perModel` and `limitBy`, and require a pick with `restrictions.required` or a list rule.
+
+Patterns:
+
+```json
+// "Choose two options from this list; the same one may be taken twice"
+"perModel": { "type": "multiple", "max": 2 },
+"multiSelect": true
+
+// "Each of this model's weapons may be exchanged" (at most as many as are held)
+"perModel": { "type": "multiple", "max": 2 },
+"multiSelect": true,
+"limitBy": [{ "kind": "weapon", "id": "combi-bolter", "count": 1 }]
+// ...and on each option:
+"swaps": [{ "from": { "kind": "weapon", "id": "combi-bolter" }, "to": { "kind": "weapon", "id": "heavy-bolter" } }]
+```
+
+`limitBy` caps the non-default picks at Σ `count` × the wargear held, so exchanges follow the wargear the unit really has; `swaps` removes the old wargear. For "each model of a profile may take one", use `"type": "some"` with a `profileId`.
+
+Pitfall: `min: 2, max: 2` on the upgrade does not make it "pick two", because the app ignores them. Put the limit in `perModel.max`; `multiple` states the intent most clearly.
 
 ### Effects
 
