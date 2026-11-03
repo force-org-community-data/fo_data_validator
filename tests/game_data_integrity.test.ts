@@ -622,4 +622,94 @@ describe('upgrade swapFrom', () => {
             'warning factions/field-army.json units/squad/upgrades/trooper-sidearm/swapFrom: every option is the default, so nothing is ever swapped',
         ]);
     });
+
+    const captainAxe = (set: GameDataSet) =>
+        set.factions[0].data.units['captain'].upgrades!['captain-axe'];
+
+    it('does not warn about wargear an earlier pick gives when restrictions.required names it', async () => {
+        // the example's captain-axe swaps twin blades, which only captain-blades gives
+        assert.deepEqual(
+            await issuesAfter((set) => {
+                captainAxe(set).restrictions!.requiredAnd = false;
+            }),
+            []
+        );
+    });
+
+    it('still warns when nothing names the wargear', async () => {
+        const issues = await issuesAfter((set) => {
+            captainAxe(set).restrictions!.required = [
+                { kind: 'weapon', id: 'rifle' },
+            ];
+        });
+        assert.deepEqual(issues, [
+            "warning factions/field-army.json units/captain/upgrades/captain-axe/swapFrom: the unit doesn't hold weapon 'twin-blades' by default, so there is nothing to take off",
+        ]);
+        assert.deepEqual(
+            await issuesAfter((set) => {
+                delete captainAxe(set).restrictions;
+            }),
+            [
+                "warning factions/field-army.json units/captain/upgrades/captain-axe/swapFrom: the unit doesn't hold weapon 'twin-blades' by default, so there is nothing to take off",
+            ]
+        );
+    });
+});
+
+describe('option swaps', () => {
+    const blades = (set: GameDataSet) => {
+        const option =
+            set.factions[0].data.units['captain'].upgrades!['captain-blades']
+                .options['twin-blades'];
+        assert.ok(!('target' in option));
+        return option.swaps![0];
+    };
+    const at =
+        'factions/field-army.json units/captain/upgrades/captain-blades/options/twin-blades/swaps/0';
+
+    it('accepts a single from and a from list (the example has both)', async () => {
+        assert.deepEqual(await issuesAfter(() => {}), []);
+        assert.deepEqual(
+            await issuesAfter((set) => {
+                blades(set).from = { kind: 'weapon', id: 'rifle' };
+            }),
+            []
+        );
+    });
+
+    it('checks every wargear in a from list', async () => {
+        const issues = await issuesAfter((set) => {
+            blades(set).from = [
+                { kind: 'weapon', id: 'rifle' },
+                { kind: 'weapon', id: 'knif' },
+                { kind: 'equipment', id: 'rifle' },
+            ];
+        });
+        assert.deepEqual(issues, [
+            `error ${at}: unknown weapon 'knif'`,
+            `error ${at}: unknown equipment 'rifle'`,
+        ]);
+    });
+
+    it('reports an empty from list', async () => {
+        const issues = await issuesAfter((set) => {
+            blades(set).from = [];
+        });
+        assert.deepEqual(issues, [
+            `error ${at}/from: a from list needs at least one wargear`,
+        ]);
+    });
+
+    it('reports wargear listed twice in a from list', async () => {
+        const issues = await issuesAfter((set) => {
+            blades(set).from = [
+                { kind: 'weapon', id: 'rifle' },
+                { kind: 'weapon', id: 'knife' },
+                { kind: 'weapon', id: 'rifle' },
+            ];
+        });
+        assert.deepEqual(issues, [
+            `error ${at}/from: weapon 'rifle' is listed more than once; a pick takes one of each`,
+        ]);
+    });
 });

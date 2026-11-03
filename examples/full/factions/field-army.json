@@ -407,7 +407,67 @@
                     }
                 }
             ],
-            "defaultWargear": [{ "kind": "weapon", "id": "rifle" }]
+            "defaultWargear": [
+                { "kind": "weapon", "id": "rifle" },
+                { "kind": "weapon", "id": "knife" }
+            ],
+            "upgrades": {
+                "captain-blades": {
+                    "id": "captain-blades",
+                    "name": "Twin blades",
+                    "default": "none",
+                    "perModel": { "type": "single" },
+                    "options": {
+                        "none": {
+                            "id": "none",
+                            "name": "None",
+                            "cost": { "points": 0 }
+                        },
+                        "twin-blades": {
+                            "id": "twin-blades",
+                            "name": "Twin blades",
+                            "cost": { "points": 10 },
+                            "swaps": [
+                                {
+                                    "from": [
+                                        { "kind": "weapon", "id": "rifle" },
+                                        { "kind": "weapon", "id": "knife" }
+                                    ],
+                                    "to": {
+                                        "kind": "weapon",
+                                        "id": "twin-blades"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                },
+                "captain-axe": {
+                    "id": "captain-axe",
+                    "name": "Axe",
+                    "default": "none",
+                    "perModel": { "type": "single" },
+                    "swapFrom": { "kind": "weapon", "id": "twin-blades" },
+                    "restrictions": {
+                        "exclusions": [],
+                        "required": [{ "kind": "weapon", "id": "twin-blades" }],
+                        "requiredAnd": true
+                    },
+                    "options": {
+                        "none": {
+                            "id": "none",
+                            "name": "None",
+                            "cost": { "points": 0 }
+                        },
+                        "axe": {
+                            "id": "axe",
+                            "name": "Axe",
+                            "cost": { "points": 5 },
+                            "weaponRefs": ["axe"]
+                        }
+                    }
+                }
+            }
         },
         "medic": {
             "id": "medic",

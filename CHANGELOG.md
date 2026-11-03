@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.7.0
+
+- **Several wargear in one swap.** An option swap's `from` may be a list of wargear refs: `{ "from": [{ "kind": "weapon", "id": "bolt-pistol" }, { "kind": "weapon", "id": "chainsword" }], "to": { "kind": "weapon", "id": "pair-of-lightning-claws" } }`. Each pick takes one of every listed `from` off the upgrade's profile and gives one `to`; the picks are capped by the scarcest `from` held, so a pick is all or nothing. A single ref is still valid. `swapFromRefs(swap)` returns a swap's `from` as a list. New checks: every `from` exists, and a `from` list is not empty and doesn't list the same wargear twice. Swap issues are now reported at `…/swaps/<index>`.
+- **`swapFrom` on wargear from another pick.** The warning that the unit doesn't hold an upgrade's `swapFrom` wargear by default is not raised when the upgrade's `restrictions.required` names that wargear: the swap applies once an earlier pick has given it. Option-level `swaps` were never checked against default wargear, so nothing changes there.
+- `schemaVersion` stays 1 and `expressionVersion` stays 1; everything is additive. Data using a `from` list needs validator ≥1.7.0 and an app that supports it.
+
+## 1.6.0
 
 - **Upgrade `swapFrom`.** A unit upgrade may have `swapFrom: { kind, id, count? }` (count defaults to 1): each pick of any of its options, including options pulled in by an UpgradeReference to a shared faction upgrade, takes that much of the wargear off the upgrade's profile (or the unit at large), up to what is held, besides giving the option's own wargear. Options with their own `swaps` keep them instead; the `default` option is not affected. New checks: the wargear exists, `count` is positive, and warnings when every option is the default or the unit holds no such wargear by default. `schemaVersion` stays 1; additive.
 

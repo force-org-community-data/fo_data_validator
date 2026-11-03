@@ -9,7 +9,7 @@ import {
     tagId,
 } from '../expressions/checker';
 import { didYouMean } from '../expressions/diagnostics';
-import { DEFAULT_SUB_FACTION_GROUP } from './schema';
+import { DEFAULT_SUB_FACTION_GROUP, swapFromRefs } from './schema';
 import type {
     AddedSlot,
     Condition,
@@ -38,6 +38,7 @@ import type {
     Upgrade,
     UpgradeReference,
     WargearRef,
+    WargearSwap,
 } from '../types';
 import { buildVocabulary } from './vocabulary';
 
@@ -982,7 +983,8 @@ class Validator {
     /*
      * `swapFrom` names wargear every non-default pick takes off: it must exist,
      * the count must be positive, there must be something to swap to, and the
-     * unit should hold it (a warning: the holder may come from a sub-faction).
+     * unit should hold it by default (a warning: the holder may come from a
+     * sub-faction) unless `restrictions.required` names it.
      */
     private swapFrom(path: string, upgrade: Upgrade, unit: Unit, scope: Scope) {
         const swap = upgrade.swapFrom;
@@ -1023,12 +1025,41 @@ class Validator {
                         u.profileId === upgrade.profileId)
                 );
             });
-        if (!holds)
+        // naming it in `restrictions.required` says an earlier pick gives it
+        const required = upgrade.restrictions?.required.some(
+            (r) => r.kind === swap.kind && r.id === swap.id
+        );
+        if (!holds && !required)
             this.report(
                 at,
                 `the unit doesn't hold ${swap.kind} '${swap.id}' by default${upgrade.profileId ? ` on '${upgrade.profileId}'` : ''}, so there is nothing to take off`,
                 'warning'
             );
+    }
+
+    /*
+     * An option's swap: every `from` and the `to` exist, and a `from` list
+     * names at least one wargear, each once.
+     */
+    private swap(path: string, swap: WargearSwap, scope: Scope) {
+        const from = swapFromRefs(swap);
+        for (const ref of from) this.wargear(path, ref, scope);
+        this.wargear(path, swap.to, scope);
+        if (!from.length)
+            this.report(
+                `${path}/from`,
+                'a from list needs at least one wargear'
+            );
+        const seen = new Set<string>();
+        for (const ref of from) {
+            const key = `${ref.kind}:${ref.id}`;
+            if (seen.has(key))
+                this.report(
+                    `${path}/from`,
+                    `${ref.kind} '${ref.id}' is listed more than once; a pick takes one of each`
+                );
+            seen.add(key);
+        }
     }
 
     private upgrade(
@@ -1113,10 +1144,9 @@ class Validator {
             option.equipmentRefs?.forEach((e) =>
                 this.known(at, 'equipment', e, keys(scope.records.equipment))
             );
-            option.swaps?.forEach((s) => {
-                this.wargear(`${at}/swaps`, s.from, scope);
-                this.wargear(`${at}/swaps`, s.to, scope);
-            });
+            option.swaps?.forEach((s, i) =>
+                this.swap(`${at}/swaps/${i}`, s, scope)
+            );
             option.subChoices?.forEach((s) =>
                 this.known(
                     at,
