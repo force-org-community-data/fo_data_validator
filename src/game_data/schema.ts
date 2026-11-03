@@ -529,10 +529,23 @@ export const WargearLimitSchema = z
     );
 
 export const WargearSwapSchema = z
-    .strictObject({ from: WargearRefSchema, to: WargearRefSchema })
+    .strictObject({
+        from: z
+            .union([WargearRefSchema, z.array(WargearRefSchema)])
+            .describe(
+                'the wargear taken off; a list takes one of each, and a pick needs all of them held'
+            ),
+        to: WargearRefSchema,
+    })
     .describe(
-        "Takes one `from` off the upgrade's profile and gives it `to` in its place, per pick"
+        "Takes one `from` (one of each, for a list) off the upgrade's profile and gives it `to` in its place, per pick"
     );
+
+/* a swap's `from` as a list, whether it names one wargear or several */
+export const swapFromRefs = (
+    swap: z.infer<typeof WargearSwapSchema>
+): Array<z.infer<typeof WargearRefSchema>> =>
+    Array.isArray(swap.from) ? swap.from : [swap.from];
 
 export const RestrictionsSchema = z.strictObject({
     exclusions: z.array(WargearRefSchema),
