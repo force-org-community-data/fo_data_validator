@@ -151,6 +151,6 @@ Data that uses a list of wargear in a swap's `from` needs validator **1.7.0** or
 
 1. Make sure `npm test`, `npm run type-check`, `npm run lint`, `npm run generate-schema -- --check` and `npm run validate-data` pass (CI runs them).
 2. Set the new version in `package.json` (`npm version <x.y.z> --no-git-tag-version`). A change to `SCHEMA_VERSION` or `EXPRESSION_VERSION`, or any other incompatible change, is a **major** bump. Whenever the major changes, run `npm run generate-schema`: it sets each schema's `$id` to the new `@<major>` URL.
-3. Commit, then tag and push the tag: `git tag vX.Y.Z && git push origin vX.Y.Z`. A GitHub Release is not needed; jsDelivr and npm's git installs read tags.
-4. Move the major tag the Action uses: `git tag -f vX && git push -f origin vX` (for example `v1`). Consumers who pin `#vX.Y.Z` are unaffected.
+3. Add a CHANGELOG entry, commit, and merge to `main`.
+4. Tagging is automatic: once CI passes on `main`, the [Release tags](.github/workflows/release-tags.yml) workflow tags the merged commit `vX.Y.Z` from `package.json` and moves the major tag the Action uses (for example `v1`). If `vX.Y.Z` already exists it does nothing, so merges that don't bump the version add no tags. Don't push version tags by hand. A GitHub Release is not needed; jsDelivr and npm's git installs read tags. Consumers who pin `#vX.Y.Z` are unaffected by the major tag moving.
 5. Consumers update the tag in their `package.json` dependency.
