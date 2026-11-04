@@ -10,7 +10,7 @@
         "url": "git+https://github.com/force-org-community-data/fo_data_validator.git"
     },
     "engines": {
-        "node": ">=20"
+        "node": ">=22"
     },
     "exports": {
         ".": "./src/index.ts",
@@ -41,7 +41,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.0.0",
-        "@types/node": "^20.0.0",
+        "@types/node": "^22.0.0",
         "eslint": "^9.0.0",
         "eslint-config-prettier": "^10.0.0",
         "typescript": "^5.0.0",
