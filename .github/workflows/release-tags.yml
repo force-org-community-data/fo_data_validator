@@ -1,0 +1,64 @@
+name: Release tags
+
+# Once CI passes on main, tag the commit with the version in package.json
+# (vX.Y.Z) and move the major tag (vX) the Action uses. Does nothing when
+# vX.Y.Z already exists, so merges that don't bump the version are skipped.
+
+on:
+    workflow_run:
+        workflows: [CI]
+        types: [completed]
+        branches: [main]
+
+permissions:
+    contents: write
+
+concurrency:
+    group: release-tags
+    cancel-in-progress: false
+
+jobs:
+    tag:
+        if: >-
+            github.event.workflow_run.conclusion == 'success' &&
+            github.event.workflow_run.event == 'push'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  ref: ${{ github.event.workflow_run.head_sha }}
+                  fetch-depth: 0
+
+            - name: Tag version
+              env:
+                  SHA: ${{ github.event.workflow_run.head_sha }}
+              run: |
+                  set -euo pipefail
+                  version=$(node -p "require('./package.json').version")
+                  if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                      echo "::error::package.json version '$version' is not X.Y.Z"
+                      exit 1
+                  fi
+                  tag="v$version"
+                  major="v${version%%.*}"
+
+                  git fetch --tags --force origin
+                  if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+                      echo "$tag already exists; nothing to do."
+                      exit 0
+                  fi
+
+                  # Only tag commits that are part of main's history.
+                  git fetch origin main
+                  if ! git merge-base --is-ancestor "$SHA" origin/main; then
+                      echo "::error::$SHA is not on main"
+                      exit 1
+                  fi
+
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git tag -a "$tag" -m "$tag" "$SHA"
+                  git tag -fa "$major" -m "$major (currently $tag)" "$SHA"
+                  git push origin "refs/tags/$tag"
+                  git push -f origin "refs/tags/$major"
+                  echo "Tagged $SHA as $tag and moved $major."
