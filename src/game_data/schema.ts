@@ -620,9 +620,15 @@ export const PerModelConfigSchema = z.strictObject({
     type: z
         .enum(['single', 'multiple', 'every', 'some', 'one-in-x'])
         .describe(
-            'single: once for the unit or one model; multiple: any number of times; every: every model gets it; some: any number of models; one-in-x: one per `everyX` models'
+            'single: once for the unit or one model; multiple: any number of times; every: every model gets it; some: any number of models; one-in-x: `count` (default 1) per `everyX` models'
         ),
     everyX: z.number().optional(),
+    count: z
+        .number()
+        .optional()
+        .describe(
+            'one-in-x only: picks allowed per `everyX` models (default 1), a positive whole number; the cap is count × floor(models / everyX), e.g. `{ "type": "one-in-x", "everyX": 5, "count": 2 }` for \'for every five Models, up to two Models may each…\''
+        ),
     max: z.number().optional(),
     excludeProfiles: ProfileFilterSchema.optional().describe(
         'profiles not counted as models for this upgrade'

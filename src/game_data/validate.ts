@@ -982,6 +982,38 @@ class Validator {
     }
 
     /*
+     * `perModel.count` is the number of picks per `everyX` models, so it only
+     * means something for `one-in-x` and must be a whole number of at least 1;
+     * 1 is the default, so writing it is redundant (a warning).
+     */
+    private perModelCount(at: string, upgrade: Upgrade) {
+        const { type, count } = upgrade.perModel;
+        if (count === undefined) return;
+        if (type !== 'one-in-x') {
+            const hint =
+                type === 'multiple' || type === 'single'
+                    ? `; did you mean perModel.max?`
+                    : '';
+            this.report(
+                at,
+                `count is only read for perModel.type 'one-in-x', not '${type}'${hint}`
+            );
+            return;
+        }
+        if (!Number.isInteger(count) || count < 1)
+            this.report(
+                at,
+                `count must be a whole number of at least 1, not ${count}`
+            );
+        else if (count === 1)
+            this.report(
+                at,
+                'count 1 is the default for one-in-x; leave it out',
+                'warning'
+            );
+    }
+
+    /*
      * `swapFrom` names wargear every non-default pick takes off: it must exist,
      * the count must be positive, there must be something to swap to, and the
      * unit should hold it by default (a warning: the holder may come from a
@@ -1200,6 +1232,7 @@ class Validator {
         }
         if (upgrade.perModel.type === 'one-in-x' && !upgrade.perModel.everyX)
             this.report(path, "a 'one-in-x' upgrade needs everyX");
+        this.perModelCount(`${path}/perModel`, upgrade);
 
         upgrade.restrictions?.exclusions.forEach((e) =>
             this.wargear(`${path}/restrictions`, e, scope)

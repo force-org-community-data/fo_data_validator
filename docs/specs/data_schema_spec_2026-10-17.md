@@ -308,12 +308,12 @@ A trait effect (validator 1.2.0) changes a unit's `traits`: `add` gives traits, 
 
 A unit's upgrades hold options or references to faction upgrades, and may use `restrictions`, `replaces`, `limitBy`, `swaps` and `profileId`:
 
-- `perModel` has a type and may use `max`, `everyX` and `excludeProfiles`. The type sets the upgrade's pick **cap** (picks counted by amount, shared by all its options):
+- `perModel` has a type and may use `max`, `everyX`, `count` and `excludeProfiles`. The type sets the upgrade's pick **cap** (picks counted by amount, shared by all its options):
     - `single`: `perModel.max` if given, else the unit's model count. A plain `single` upgrade is one choice.
     - `multiple`: `perModel.max` (default 1); the same option may be picked repeatedly.
     - `every`: one per counted model, applied to all of them when picked.
     - `some`: up to one per counted model; `perModel.max` is ignored.
-    - `one-in-x`: `floor(counted models / everyX)`; `everyX` is required.
+    - `one-in-x`: `count × floor(counted models / everyX)`; `everyX` is required, `count` defaults to 1. `count` (validator 1.9.0) is for "for every five Models, up to two Models may each …": `{ "type": "one-in-x", "everyX": 5, "count": 2 }`. Checks: `count` on any other type is an error, as is a `count` that isn't a whole number of at least 1; `count: 1` is a warning (the default).
 
   Counted models respect `profileId` and `excludeProfiles`.
 - `multiSelect` (boolean, default false) lets an upgrade's options be held together (checkboxes). Without it `single` / `every` upgrades are a single choice; `multiple` / `some` upgrades hold several picks regardless. A multi-select upgrade at its cap drops its earliest pick for a new one; at a cap of 1 the options take turns.

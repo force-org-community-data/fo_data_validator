@@ -159,7 +159,7 @@
                     "name": "Trooper sidearm",
                     "profileId": "trooper",
                     "default": "none",
-                    "perModel": { "type": "one-in-x", "everyX": 5 },
+                    "perModel": { "type": "one-in-x", "everyX": 5, "count": 2 },
                     "swapFrom": { "kind": "weapon", "id": "rifle" },
                     "options": {
                         "none": {

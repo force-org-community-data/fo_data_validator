@@ -45,6 +45,24 @@ describe('checkShapes', () => {
         assert.ok(issues.some((i) => i.startsWith('units/carrier/profiles: ')));
     });
 
+    it('reports a perModel count that is not a number', async () => {
+        const issues = await issuesAfter('squad', (u) => {
+            const upgrades = u.upgrades as Record<
+                string,
+                { perModel: Record<string, unknown> }
+            >;
+            upgrades['trooper-sidearm'].perModel.count = 'two';
+        });
+        assert.ok(
+            issues.some((i) =>
+                i.startsWith(
+                    'units/squad/upgrades/trooper-sidearm/perModel/count: '
+                )
+            ),
+            issues.join('\n')
+        );
+    });
+
     it('reports an unknown key', async () => {
         const issues = await issuesAfter(
             'squad',

@@ -583,6 +583,66 @@ describe('faction and sub-faction list rules', () => {
     });
 });
 
+describe('perModel count', () => {
+    const sidearm = (set: GameDataSet) =>
+        set.factions[0].data.units['squad'].upgrades!['trooper-sidearm'];
+    const squads = (set: GameDataSet) =>
+        set.factions[0].data.units['squad'].upgrades!['squad-options'];
+    const at =
+        'factions/field-army.json units/squad/upgrades/trooper-sidearm/perModel';
+
+    it('accepts the example, two picks per five models', async () => {
+        assert.deepEqual(await issuesAfter(() => {}), []);
+    });
+
+    it('accepts one-in-x without count', async () => {
+        const issues = await issuesAfter((set) => {
+            delete sidearm(set).perModel.count;
+        });
+        assert.deepEqual(issues, []);
+    });
+
+    for (const count of [0, -2, 1.5]) {
+        it(`rejects count ${count}`, async () => {
+            const issues = await issuesAfter((set) => {
+                sidearm(set).perModel.count = count;
+            });
+            assert.deepEqual(issues, [
+                `error ${at}: count must be a whole number of at least 1, not ${count}`,
+            ]);
+        });
+    }
+
+    it('warns that count 1 is the default', async () => {
+        const issues = await issuesAfter((set) => {
+            sidearm(set).perModel.count = 1;
+        });
+        assert.deepEqual(issues, [
+            `warning ${at}: count 1 is the default for one-in-x; leave it out`,
+        ]);
+    });
+
+    it('rejects count on other types, pointing multiple and single at max', async () => {
+        const issues = await issuesAfter((set) => {
+            sidearm(set).perModel = { type: 'multiple', count: 2 };
+            squads(set).perModel = { type: 'some', count: 2 };
+        });
+        assert.deepEqual(issues, [
+            `error ${at}: count is only read for perModel.type 'one-in-x', not 'multiple'; did you mean perModel.max?`,
+            "error factions/field-army.json units/squad/upgrades/squad-options/perModel: count is only read for perModel.type 'one-in-x', not 'some'",
+        ]);
+    });
+
+    it('rejects count on every', async () => {
+        const issues = await issuesAfter((set) => {
+            sidearm(set).perModel = { type: 'every', count: 3 };
+        });
+        assert.deepEqual(issues, [
+            `error ${at}: count is only read for perModel.type 'one-in-x', not 'every'`,
+        ]);
+    });
+});
+
 describe('upgrade swapFrom', () => {
     const sidearm = (set: GameDataSet) =>
         set.factions[0].data.units['squad'].upgrades!['trooper-sidearm'];
