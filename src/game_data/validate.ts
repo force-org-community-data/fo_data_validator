@@ -791,6 +791,7 @@ class Validator {
                 : [...FIELD_SCOPES.upgrade];
             this.upgrade(at, upgrade, scope, scopes);
             this.swapFrom(at, upgrade, unit, scope);
+            this.mirrorOf(at, upgrade, unit, scope);
         }
         this.ids(`${path}/upgrades`, unit.upgrades);
 
@@ -1033,6 +1034,115 @@ class Validator {
             this.report(
                 at,
                 `the unit doesn't hold ${swap.kind} '${swap.id}' by default${upgrade.profileId ? ` on '${upgrade.profileId}'` : ''}, so there is nothing to take off`,
+                'warning'
+            );
+    }
+
+    /*
+     * `mirrorOf` makes an upgrade copy a sibling's pick, so the two must line
+     * up: the source is another upgrade of the unit, on another profile, and
+     * not a mirror itself (no chains, so no cycles); both offer the same option
+     * ids once references are expanded, with the same default; the mirror's
+     * amount comes from its own profile, so only `every` and `single` fit.
+     * Fields that let a pick be blocked or that disagree with the source are
+     * warnings, and two upgrades replacing each other is an error.
+     */
+    private mirrorOf(path: string, upgrade: Upgrade, unit: Unit, scope: Scope) {
+        const sourceId = upgrade.mirrorOf;
+        if (sourceId === undefined) return;
+        const at = `${path}/mirrorOf`;
+        if (sourceId === upgrade.id) {
+            this.report(at, "an upgrade can't mirror itself");
+            return;
+        }
+        const source = unit.upgrades?.[sourceId];
+        if (!source) {
+            this.known(at, 'sibling upgrade', sourceId, keys(unit.upgrades));
+            return;
+        }
+        if (source.mirrorOf !== undefined) {
+            this.report(
+                at,
+                `'${sourceId}' mirrors '${source.mirrorOf}' itself; mirror '${source.mirrorOf}' directly`
+            );
+            return;
+        }
+        const bucket = (u: Upgrade) =>
+            u.profileId ? `profile '${u.profileId}'` : 'the unit at large';
+        if (source.profileId === upgrade.profileId)
+            this.report(
+                at,
+                `'${sourceId}' is on the same profile (${bucket(upgrade)}); a mirror must be on another profile`
+            );
+
+        const mine = new Set(this.resolveOptions(upgrade, scope).offered);
+        const theirs = new Set(this.resolveOptions(source, scope).offered);
+        const missing = [...theirs].filter((id) => !mine.has(id));
+        const extra = [...mine].filter((id) => !theirs.has(id));
+        const list = (ids: Array<string>) =>
+            ids.map((id) => `'${id}'`).join(', ');
+        if (missing.length)
+            this.report(
+                `${path}/options`,
+                `doesn't offer ${list(missing)}, which '${sourceId}' offers; a mirror needs every option of its source, under the same id`
+            );
+        if (extra.length)
+            this.report(
+                `${path}/options`,
+                `offers ${list(extra)}, which '${sourceId}' doesn't; a mirror only ever takes its source's pick`
+            );
+        if (upgrade.default !== source.default)
+            this.report(
+                `${path}/default`,
+                `default ${upgrade.default ? `'${upgrade.default}'` : 'none'} differs from '${sourceId}''s (${source.default ? `'${source.default}'` : 'none'}); a mirror and its source need the same default`
+            );
+
+        const type = upgrade.perModel.type;
+        if (type !== 'every' && type !== 'single')
+            this.report(
+                `${path}/perModel`,
+                `a mirror's perModel.type must be 'every' or 'single', not '${type}': its amount follows its own profile, so it can't be a number of picks the player chooses`
+            );
+
+        if (!!upgrade.multiSelect !== !!source.multiSelect)
+            this.report(
+                `${path}/multiSelect`,
+                `multiSelect differs from '${sourceId}''s; a mirror takes every option its source picks, so the two should match`,
+                'warning'
+            );
+
+        if (upgrade.replaces?.includes(sourceId))
+            this.report(
+                `${path}/replaces`,
+                `replaces '${sourceId}', the upgrade it mirrors`
+            );
+        if (source.replaces?.includes(upgrade.id))
+            this.report(
+                at,
+                `'${sourceId}' replaces this upgrade, so picking it would remove its own mirror`
+            );
+
+        const restricted =
+            !!upgrade.restrictions &&
+            (upgrade.restrictions.exclusions.length > 0 ||
+                upgrade.restrictions.required.length > 0);
+        const referenceRestricted = Object.values(upgrade.options).some(
+            (o) =>
+                'target' in o &&
+                !!o.restrictions &&
+                (o.restrictions.exclusions.length > 0 ||
+                    o.restrictions.required.length > 0)
+        );
+        if (restricted || referenceRestricted)
+            this.report(
+                restricted ? `${path}/restrictions` : `${path}/options`,
+                `restrictions on a mirror can stop it copying '${sourceId}''s pick, leaving its models without the same option`,
+                'warning'
+            );
+        if (upgrade.limitBy?.length)
+            this.report(
+                `${path}/limitBy`,
+                `limitBy on a mirror can stop it copying '${sourceId}''s pick, leaving its models without the same option`,
                 'warning'
             );
     }

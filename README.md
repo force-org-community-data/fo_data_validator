@@ -147,6 +147,8 @@ Data that uses slot sources (`source` on a slot, a slot option's `slot` effect o
 
 Data that uses a list of wargear in a swap's `from` needs validator **1.7.0** or later, and an app that supports it.
 
+Data that uses an upgrade's `mirrorOf` needs validator **1.8.0** or later, and an app that supports it.
+
 ## Releasing
 
 1. Make sure `npm test`, `npm run type-check`, `npm run lint`, `npm run generate-schema -- --check` and `npm run validate-data` pass (CI runs them).

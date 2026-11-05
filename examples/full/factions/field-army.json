@@ -592,7 +592,30 @@
                     "stats": { "move": "5", "skill": "4", "wounds": "1", "morale": "6", "save": "5+" }
                 }
             ],
-            "defaultWargear": [{ "kind": "weapon", "id": "rifle", "perModel": true }]
+            "defaultWargear": [{ "kind": "weapon", "id": "rifle", "perModel": true }],
+            "upgrades": {
+                "sapper-tools": {
+                    "id": "sapper-tools",
+                    "name": "Sidearms",
+                    "description": "Every model in this unit may take one item from the Sidearms list; every model must take the same item. The player picks here, for the Sappers.",
+                    "profileId": "sapper",
+                    "perModel": { "type": "every" },
+                    "options": {
+                        "sidearms": { "id": "sidearms", "target": "sidearms" }
+                    }
+                },
+                "foreman-tools": {
+                    "id": "foreman-tools",
+                    "name": "Sidearms (Foreman)",
+                    "description": "The Foreman's copy: always takes the Sappers' pick, paid per Foreman.",
+                    "profileId": "foreman",
+                    "perModel": { "type": "every" },
+                    "mirrorOf": "sapper-tools",
+                    "options": {
+                        "sidearms": { "id": "sidearms", "target": "sidearms" }
+                    }
+                }
+            }
         }
     },
     "weapons": {

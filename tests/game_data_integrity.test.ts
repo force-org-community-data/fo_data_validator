@@ -713,3 +713,219 @@ describe('option swaps', () => {
         ]);
     });
 });
+
+describe('upgrade mirrorOf', () => {
+    const team = (set: GameDataSet) =>
+        set.factions[0].data.units['sapper-team'];
+    const foreman = (set: GameDataSet) => team(set).upgrades!['foreman-tools'];
+    const sapper = (set: GameDataSet) => team(set).upgrades!['sapper-tools'];
+    const at =
+        'factions/field-army.json units/sapper-team/upgrades/foreman-tools';
+
+    it("accepts the example, whose Foreman copies the Sappers' sidearm", async () => {
+        assert.deepEqual(await issuesAfter(() => {}), []);
+    });
+
+    it('accepts own options matching options a reference pulls in', async () => {
+        assert.deepEqual(
+            await issuesAfter((set) => {
+                foreman(set).perModel = { type: 'single' };
+                foreman(set).options = {
+                    knife: {
+                        id: 'knife',
+                        name: 'Knife',
+                        cost: { points: 3 },
+                        weaponRefs: ['knife'],
+                    },
+                    axe: {
+                        id: 'axe',
+                        name: 'Axe',
+                        cost: { points: 6 },
+                        weaponRefs: ['axe'],
+                    },
+                };
+            }),
+            []
+        );
+    });
+
+    it('reports an unknown source, with a hint, and a mirror of itself', async () => {
+        const unknown = await issuesAfter((set) => {
+            foreman(set).mirrorOf = 'sapper-tool';
+        });
+        assert.equal(unknown.length, 1);
+        assert.ok(
+            unknown[0].startsWith(
+                `error ${at}/mirrorOf: unknown sibling upgrade 'sapper-tool'`
+            )
+        );
+        assert.deepEqual(
+            await issuesAfter((set) => {
+                foreman(set).mirrorOf = 'foreman-tools';
+            }),
+            [`error ${at}/mirrorOf: an upgrade can't mirror itself`]
+        );
+    });
+
+    it('does not chain mirrors', async () => {
+        const issues = await issuesAfter((set) => {
+            sapper(set).mirrorOf = 'foreman-tools';
+        });
+        assert.deepEqual(issues, [
+            "error factions/field-army.json units/sapper-team/upgrades/sapper-tools/mirrorOf: 'foreman-tools' mirrors 'sapper-tools' itself; mirror 'sapper-tools' directly",
+            `error ${at}/mirrorOf: 'sapper-tools' mirrors 'foreman-tools' itself; mirror 'foreman-tools' directly`,
+        ]);
+    });
+
+    it('needs another profile', async () => {
+        assert.deepEqual(
+            await issuesAfter((set) => {
+                foreman(set).profileId = 'sapper';
+            }),
+            [
+                `error ${at}/mirrorOf: 'sapper-tools' is on the same profile (profile 'sapper'); a mirror must be on another profile`,
+            ]
+        );
+        assert.deepEqual(
+            await issuesAfter((set) => {
+                delete foreman(set).profileId;
+                delete sapper(set).profileId;
+            }),
+            [
+                `error ${at}/mirrorOf: 'sapper-tools' is on the same profile (the unit at large); a mirror must be on another profile`,
+            ]
+        );
+    });
+
+    it("needs the source's options under the same ids, and no others", async () => {
+        const issues = await issuesAfter((set) => {
+            foreman(set).options = {
+                knife: {
+                    id: 'knife',
+                    name: 'Knife',
+                    cost: { points: 2 },
+                    weaponRefs: ['knife'],
+                },
+                blades: {
+                    id: 'blades',
+                    name: 'Twin blades',
+                    cost: { points: 8 },
+                    weaponRefs: ['twin-blades'],
+                },
+            };
+        });
+        assert.deepEqual(issues, [
+            `error ${at}/options: doesn't offer 'axe', which 'sapper-tools' offers; a mirror needs every option of its source, under the same id`,
+            `error ${at}/options: offers 'blades', which 'sapper-tools' doesn't; a mirror only ever takes its source's pick`,
+        ]);
+    });
+
+    it('needs the same default', async () => {
+        assert.deepEqual(
+            await issuesAfter((set) => {
+                sapper(set).default = 'knife';
+            }),
+            [
+                `error ${at}/default: default none differs from 'sapper-tools''s ('knife'); a mirror and its source need the same default`,
+            ]
+        );
+        assert.deepEqual(
+            await issuesAfter((set) => {
+                sapper(set).default = 'knife';
+                foreman(set).default = 'axe';
+            }),
+            [
+                `error ${at}/default: default 'axe' differs from 'sapper-tools''s ('knife'); a mirror and its source need the same default`,
+            ]
+        );
+        assert.deepEqual(
+            await issuesAfter((set) => {
+                sapper(set).default = 'knife';
+                foreman(set).default = 'knife';
+            }),
+            []
+        );
+    });
+
+    it("allows only 'every' and 'single'", async () => {
+        for (const type of ['some', 'multiple', 'one-in-x'] as const) {
+            const issues = await issuesAfter((set) => {
+                foreman(set).perModel = { type, everyX: 5 };
+            });
+            assert.deepEqual(issues, [
+                `error ${at}/perModel: a mirror's perModel.type must be 'every' or 'single', not '${type}': its amount follows its own profile, so it can't be a number of picks the player chooses`,
+            ]);
+        }
+    });
+
+    it('warns when multiSelect differs from the source', async () => {
+        assert.deepEqual(
+            await issuesAfter((set) => {
+                foreman(set).multiSelect = true;
+            }),
+            [
+                `warning ${at}/multiSelect: multiSelect differs from 'sapper-tools''s; a mirror takes every option its source picks, so the two should match`,
+            ]
+        );
+        assert.deepEqual(
+            await issuesAfter((set) => {
+                foreman(set).multiSelect = true;
+                sapper(set).multiSelect = true;
+            }),
+            []
+        );
+    });
+
+    it('reports a mirror and its source replacing each other', async () => {
+        const issues = await issuesAfter((set) => {
+            foreman(set).replaces = ['sapper-tools'];
+            sapper(set).replaces = ['foreman-tools'];
+        });
+        assert.deepEqual(issues, [
+            `error ${at}/replaces: replaces 'sapper-tools', the upgrade it mirrors`,
+            `error ${at}/mirrorOf: 'sapper-tools' replaces this upgrade, so picking it would remove its own mirror`,
+        ]);
+    });
+
+    it('warns about restrictions and limitBy that can block the copy', async () => {
+        const issues = await issuesAfter((set) => {
+            foreman(set).restrictions = {
+                exclusions: [{ kind: 'weapon', id: 'twin-blades' }],
+                required: [],
+                requiredAnd: false,
+            };
+            foreman(set).limitBy = [{ kind: 'weapon', id: 'rifle', count: 1 }];
+        });
+        assert.deepEqual(issues, [
+            `warning ${at}/restrictions: restrictions on a mirror can stop it copying 'sapper-tools''s pick, leaving its models without the same option`,
+            `warning ${at}/limitBy: limitBy on a mirror can stop it copying 'sapper-tools''s pick, leaving its models without the same option`,
+        ]);
+        assert.deepEqual(
+            await issuesAfter((set) => {
+                foreman(set).options['sidearms'] = {
+                    id: 'sidearms',
+                    target: 'sidearms',
+                    restrictions: {
+                        exclusions: [],
+                        required: [{ kind: 'weapon', id: 'rifle' }],
+                        requiredAnd: false,
+                    },
+                };
+            }),
+            [
+                `warning ${at}/options: restrictions on a mirror can stop it copying 'sapper-tools''s pick, leaving its models without the same option`,
+            ]
+        );
+        // empty restrictions are fine
+        assert.deepEqual(
+            await issuesAfter((set) => {
+                foreman(set).restrictions = {
+                    exclusions: [],
+                    required: [],
+                    requiredAnd: false,
+                };
+            }),
+            []
+        );
+    });
+});

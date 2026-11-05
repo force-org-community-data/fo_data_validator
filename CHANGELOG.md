@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.8.0
+
+- **Upgrade `mirrorOf`.** A unit upgrade may name a sibling upgrade on another profile with `mirrorOf`: it always takes the same option as that source, never chosen by the player, with the amount set by its own `perModel` and profile, and costs per pick as usual. For "every model must have the same item" when the models are on different profiles, e.g. a Legionaries' `option-1` (`profileId: legionary`) and the Sergeant's `option-1-sergeant` (`profileId: sergeant`, `mirrorOf: "option-1"`). New checks (errors): the source exists in the unit and isn't the upgrade itself; the source has no `mirrorOf` (no chains or cycles); the two have different `profileId`s; they offer the same option ids, UpgradeReferences expanded, and the same `default`; the mirror's `perModel.type` is `every` or `single`; neither `replaces` the other. Warnings: the mirror's `multiSelect` differs from the source's, or the mirror has `restrictions` or `limitBy` that could block the copy. Only on unit upgrades (faction upgrades and sub-faction `addUpgrade` copies can't mirror).
+- `schemaVersion` stays 1 and `expressionVersion` stays 1; everything is additive. Data using `mirrorOf` needs validator ≥1.8.0 and an app that supports it.
+
 ## 1.7.0
 
 - **Several wargear in one swap.** An option swap's `from` may be a list of wargear refs: `{ "from": [{ "kind": "weapon", "id": "bolt-pistol" }, { "kind": "weapon", "id": "chainsword" }], "to": { "kind": "weapon", "id": "pair-of-lightning-claws" } }`. Each pick takes one of every listed `from` off the upgrade's profile and gives one `to`; the picks are capped by the scarcest `from` held, so a pick is all or nothing. A single ref is still valid. `swapFromRefs(swap)` returns a swap's `from` as a list. New checks: every `from` exists, and a `from` list is not empty and doesn't list the same wargear twice. Swap issues are now reported at `…/swaps/<index>`.
