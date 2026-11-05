@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.0
+
+- **`perModel.count` for `one-in-x`.** A `one-in-x` upgrade may set `count`, the picks allowed per `everyX` models, so the cap is `count × floor(models / everyX)`. For "For every five Models in this Unit, up to two Models may each have their X exchanged …": `"perModel": { "type": "one-in-x", "everyX": 5, "count": 2 }` (2 picks at 5 to 9 models, 4 at 10, where `multiple` with `max: 2` stays at 2). Left out, it is 1, as before. New checks: `count` on any other `perModel.type` is an error (pointing `multiple` / `single` at `max`), as is a `count` that isn't a whole number of at least 1; `count: 1` is a warning, since it is the default.
+- `schemaVersion` stays 1 and `expressionVersion` stays 1; everything is additive. Data using `count` needs validator ≥1.9.0 and an app that supports it (until then the app allows one pick per `everyX`).
+
 ## 1.8.0
 
 - **Upgrade `mirrorOf`.** A unit upgrade may name a sibling upgrade on another profile with `mirrorOf`: it always takes the same option as that source, never chosen by the player, with the amount set by its own `perModel` and profile, and costs per pick as usual. For "every model must have the same item" when the models are on different profiles, e.g. a Legionaries' `option-1` (`profileId: legionary`) and the Sergeant's `option-1-sergeant` (`profileId: sergeant`, `mirrorOf: "option-1"`). New checks (errors): the source exists in the unit and isn't the upgrade itself; the source has no `mirrorOf` (no chains or cycles); the two have different `profileId`s; they offer the same option ids, UpgradeReferences expanded, and the same `default`; the mirror's `perModel.type` is `every` or `single`; neither `replaces` the other. Warnings: the mirror's `multiSelect` differs from the source's, or the mirror has `restrictions` or `limitBy` that could block the copy. Only on unit upgrades (faction upgrades and sub-faction `addUpgrade` copies can't mirror).

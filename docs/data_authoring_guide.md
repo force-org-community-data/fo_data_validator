@@ -201,7 +201,8 @@ A unit's `upgrades` is a record of `Upgrade`s; each holds `options`.
 }
 ```
 
-- `perModel.type`: `single` (once), `multiple` (any number of times), `every` (every model), `some` (any number of models), `one-in-x` (one per `everyX` models). `max` and `excludeProfiles` refine it. See "How picks are controlled" below.
+- `perModel.type`: `single` (once), `multiple` (any number of times), `every` (every model), `some` (any number of models), `one-in-x` (`count`, default 1, per `everyX` models). `max` and `excludeProfiles` refine it. See "How picks are controlled" below.
+- `perModel.count` (validator 1.9.0, `one-in-x` only): picks allowed per `everyX` models, a whole number of at least 1. "For every five Models in this Unit, up to two Models may each have their bolter exchanged for …" is `"perModel": { "type": "one-in-x", "everyX": 5, "count": 2 }`: 2 picks for 5 to 9 models, 4 for 10. It is an error on any other type (for a fixed number of picks use `multiple` with `max`), and a warning when it is 1, the default. See `trooper-sidearm` in `examples/full`.
 - An option gives wargear through `weaponRefs` / `equipmentRefs` (faction weapon/equipment ids). It may also have `swaps`, `subChoices`, `effects`, `when`, `max`.
 - `{ "id", "target" }` is an **UpgradeReference** to a faction-level upgrade in the faction's `upgrades`, so a shared wargear list is written once. When option ids clash, the upgrade's own option wins, then the first-referenced shared upgrade.
 - **Restrictions** (`restrictions: { "exclusions": [...], "required": [...], "requiredAnd": false }`) and `limitBy` point at wargear (`{ "kind": "weapon" | "equipment", "id" }`), not at options, so a rifle satisfies a requirement whichever slot it came from. Write an exclusion on one side only; it applies both ways.
@@ -223,7 +224,7 @@ Three settings decide how many options an upgrade holds at once and how they are
     | `multiple` | `perModel.max` (1 if left out) | picks up to `max`, the same option more than once |
     | `every` | models counted (`profileId`, `excludeProfiles` apply) | every model gets the option; picking one sets the amount to every model |
     | `some` | models counted | any number of models, up to one pick per model. `perModel.max` is **not** read for `some`; limit it with `limitBy` |
-    | `one-in-x` | `floor(models / everyX)` | one pick per `everyX` models; `everyX` is required |
+    | `one-in-x` | `count × floor(models / everyX)` (`count` defaults to 1) | `count` picks per `everyX` models; `everyX` is required |
 
 - **`multiSelect`** (boolean) lets the options be held together, shown as checkboxes. Without it, `single` and `every` upgrades are a single choice; `multiple` and `some` upgrades already hold several picks, shown with amounts. A full multi-select upgrade drops its earliest pick to make room for a new one. If the cap is 1, the options just take turns, whatever `multiSelect` says.
 - **Upgrade `min` / `max`** (numbers or expressions) are checked as expressions, but **the app does not enforce them**: nothing counts picks or models against them. Cap picks with `perModel` and `limitBy`, and require a pick with `restrictions.required` or a list rule.
@@ -241,6 +242,10 @@ Patterns:
 "limitBy": [{ "kind": "weapon", "id": "combi-bolter", "count": 1 }]
 // ...and on each option:
 "swaps": [{ "from": { "kind": "weapon", "id": "combi-bolter" }, "to": { "kind": "weapon", "id": "heavy-bolter" } }]
+
+// "For every five Models in this Unit, up to two Models may each have their X exchanged for ..."
+// (2 picks at 5 to 9 models, 4 at 10; `multiple` with `max: 2` would stay at 2)
+"perModel": { "type": "one-in-x", "everyX": 5, "count": 2 }
 ```
 
 `limitBy` caps the non-default picks at Σ `count` × the wargear held, so exchanges follow the wargear the unit really has; `swaps` removes the old wargear. For "each model of a profile may take one", use `"type": "some"` with a `profileId`.
