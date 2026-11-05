@@ -672,6 +672,9 @@ export const UpgradeSchema = z.strictObject({
         .describe(
             "each pick of any option takes `count` (default 1) of this wargear off the upgrade's profile (or the unit at large), up to what is held, besides giving the option's own wargear; covers options reached through a reference too, except options with their own `swaps`; not applied to the `default` option"
         ),
+    mirrorOf: SlugSchema.optional().describe(
+        "id of a sibling unit upgrade on another profile whose pick this upgrade always copies: the same option, never chosen by the player, with the amount set by this upgrade's own `perModel` and profile. Both must offer the same option ids (references expanded) and the same `default`; `perModel.type` must be `every` or `single`; the source can't itself have `mirrorOf`"
+    ),
     options: z
         .record(SlugSchema, z.union([OptionSchema, UpgradeReferenceSchema]))
         .describe(

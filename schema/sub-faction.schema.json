@@ -262,6 +262,14 @@
                                         }
                                     ]
                                 },
+                                "mirrorOf": {
+                                    "description": "id of a sibling unit upgrade on another profile whose pick this upgrade always copies: the same option, never chosen by the player, with the amount set by this upgrade's own `perModel` and profile. Both must offer the same option ids (references expanded) and the same `default`; `perModel.type` must be `every` or `single`; the source can't itself have `mirrorOf`",
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/definitions/__schema3"
+                                        }
+                                    ]
+                                },
                                 "options": {
                                     "type": "object",
                                     "propertyNames": {

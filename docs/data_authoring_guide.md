@@ -209,6 +209,7 @@ A unit's `upgrades` is a record of `Upgrade`s; each holds `options`.
 - `profileId` puts the upgrade's wargear on that profile (for example the sergeant); left out, it belongs to the unit at large. `swaps: [{ "from": <wargear ref>, "to": <wargear ref> }]` replaces wargear that profile holds. `from` may be a list, for one exchange that takes several items: each pick takes one of every listed wargear and gives one `to`, and the picks are capped by the scarcest of them held, so it is all or nothing. "May have its bolt pistol and chainsword exchanged for one pair of lightning claws": `"from": [{ "kind": "weapon", "id": "bolt-pistol" }, { "kind": "weapon", "id": "chainsword" }], "to": { "kind": "weapon", "id": "pair-of-lightning-claws" }` (two separate swaps would give two pairs). A list must not be empty or name the same wargear twice. See `captain-blades` in `examples/full`.
 - `swapFrom: { "kind", "id", "count"? }` on the **upgrade** (not the option) makes every pick of any of its options take `count` (default 1) of that wargear off the upgrade's profile, up to what is held, while the option's own `weaponRefs` / `equipmentRefs` give the new wargear. It is for options pulled in from a shared list by an UpgradeReference, which cannot carry option-level `swaps` because the same list replaces different wargear in different units. It also covers the upgrade's own options, except any option with its own `swaps` (those win), and never the `default` option. "For every five Models, one Legionary may exchange its bolt pistol for an item from the Legion Pistols list": `"perModel": { "type": "one-in-x", "everyX": 5 }`, `"swapFrom": { "kind": "weapon", "id": "bolt-pistol" }`, options `none` (the default) plus `{ "id": "legion-pistols", "target": "legion-pistols" }`. The checker warns if the unit holds no such wargear by default, unless the upgrade's `restrictions.required` names it: then the swap applies only once an earlier pick has given it ("Any Model which has had its power glaive exchanged for one combi-bolter and one power weapon may have its combi-bolter exchanged for one item from the Legion Combi-weapons list": `"swapFrom": { "kind": "weapon", "id": "combi-bolter" }` with `"restrictions": { "required": [{ "kind": "weapon", "id": "combi-bolter" }], … }`). See `trooper-sidearm` and `captain-axe` in `examples/full`.
 - `subChoices` on an option lists ids of `SubChoice`s (defined once in the game or faction): a picker beside the option whose value may add to (`cost`) or multiply (`costMultiplier`) the option's cost.
+- `mirrorOf: "<sibling upgrade id>"` (validator 1.8.0) makes an upgrade always take the same option as another upgrade of the unit on a **different profile**. It is for "every model takes the same item" when the models are on different profiles: wargear is filed per profile, and an upgrade only gives wargear to (and swaps from) its own profile, so one upgrade can't cover both. Split it into one upgrade per profile: the player picks on the source, and the mirror follows. See "Same item for every model: `mirrorOf`" below and `sapper-tools` / `foreman-tools` in `examples/full`.
 
 #### How picks are controlled
 
@@ -245,6 +246,49 @@ Patterns:
 `limitBy` caps the non-default picks at Σ `count` × the wargear held, so exchanges follow the wargear the unit really has; `swaps` removes the old wargear. For "each model of a profile may take one", use `"type": "some"` with a `profileId`.
 
 Pitfall: `min: 2, max: 2` on the upgrade does not make it "pick two", because the app ignores them. Put the limit in `perModel.max`; `multiple` states the intent most clearly.
+
+##### Same item for every model: `mirrorOf`
+
+"Every Model in this Unit must have one item from the Legion Heavy Weapons list selected for it. Every Model in this Unit must have the same item selected for it." The Legionaries and the Sergeant are different profiles, so write one `every` upgrade per profile and make the Sergeant's a mirror of the Legionaries':
+
+```json
+"option-1": {
+    "id": "option-1",
+    "name": "Heavy weapon",
+    "profileId": "legionary",
+    "perModel": { "type": "every" },
+    "swapFrom": { "kind": "weapon", "id": "bolter" },
+    "options": { "heavy-weapons": { "id": "heavy-weapons", "target": "legion-heavy-weapons" } }
+},
+"option-1-sergeant": {
+    "id": "option-1-sergeant",
+    "name": "Heavy weapon (Sergeant)",
+    "profileId": "sergeant",
+    "perModel": { "type": "every" },
+    "mirrorOf": "option-1",
+    "swapFrom": { "kind": "weapon", "id": "bolter" },
+    "options": { "heavy-weapons": { "id": "heavy-weapons", "target": "legion-heavy-weapons" } }
+}
+```
+
+- The player picks on the **source** (`option-1`). The **mirror** (`option-1-sergeant`) is never picked by hand: it takes the same option id as the source, with its amount set by its own `perModel` and profile (one per Sergeant for `every`, one for `single`). Unpicking the source clears the mirror.
+- Each upgrade gives wargear to its own profile and applies its own `swapFrom` / option `swaps`, so each profile swaps what it holds.
+- Cost is per pick as usual: each profile pays for its own models, at the mirror's option costs. The mirror's own options may therefore cost differently from the source's (a Sergeant's copy free, say).
+- Referencing the same shared upgrade from both, as above, is the easiest way to keep the options equal.
+
+Rules the checker enforces (errors unless noted):
+
+- `mirrorOf` names another upgrade of the same unit, not the upgrade itself, and that upgrade has no `mirrorOf` of its own: mirrors don't chain, so there are no cycles. To keep three profiles in step, mirror the same source twice.
+- The mirror and its source have different `profileId`s (left out on both counts as the same: the unit at large). A mirror on its source's bucket would add nothing.
+- The mirror offers exactly the source's option ids, with UpgradeReferences expanded (own options and referenced ones both count). The mirror may write as own options what the source pulls in by reference, or the other way round; only the ids must match.
+- The mirror and its source have the same `default`, or neither has one.
+- The mirror's `perModel.type` is `every` or `single`. `some`, `multiple` and `one-in-x` are rejected: they describe how many picks the player chooses, and a mirror's amount isn't chosen.
+- The mirror and its source don't `replace` each other (the mirror would remove its own source, or picking the source would remove its mirror). Other `replaces` on a mirror are allowed: they take effect whenever the mirror is filled.
+- *Warning*: the mirror's `multiSelect` differs from the source's. A mirror takes every option its source holds, so they should agree.
+- *Warning*: the mirror has `restrictions` (on the upgrade or on a reference) or `limitBy`. These can stop the mirror copying a pick the source made, leaving its models without the same item. Put such limits on the source.
+- Not checked: the mirror's `when`, `min`/`max` and options' `when`/`max` apply as on any upgrade; a mirror whose `when` is false simply isn't filled.
+
+Sub-faction `addUpgrade` doesn't interact with `mirrorOf`: it adds copies of faction upgrades, which have no `mirrorOf`, and a mirror's source must be one of the unit's own `upgrades`, so it can't name an added copy. `grantedBy` on those copies is unrelated.
 
 ### Effects
 
